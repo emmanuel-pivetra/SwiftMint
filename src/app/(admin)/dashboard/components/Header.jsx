@@ -16,15 +16,6 @@ export default function Header({ chain = "SOL", onOpenDeposit = () => {} }) {
           <span className="text-lg font-semibold tracking-wide text-white">SwiftMint</span>
         </div>
 
-        {/* Navigation */}
-        <nav className="hidden items-center gap-6 text-sm text-white/70 md:flex">
-          {["Discover", "Pulse", "Trackers", "Perpetuals", "Yield", "Vision", "Portfolio"].map((item) => (
-            <button key={item} className="transition hover:text-white" onClick={() => router.push(`/${item.toLowerCase()}`)}>
-              {item}
-            </button>
-          ))}
-        </nav>
-
         {/* Spacer */}
         <div className="flex-1" />
 
@@ -45,9 +36,7 @@ export default function Header({ chain = "SOL", onOpenDeposit = () => {} }) {
             className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white hover:bg-white/10"
           >
             {chain}
-            <ChevronDown className="h-4 w-4 text-white/60" />
           </button>
-          {/* placeholder for menu if you want to expand */}
         </div>
 
         {/* Deposit — delegated to parent via callback */}

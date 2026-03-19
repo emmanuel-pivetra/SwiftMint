@@ -28,13 +28,13 @@ import {
 
 export const navConfig = [
   { href: `/${DASHBOARD}`, text: 'Dashboard', icon: LayoutDashboard },
-  { href: `/${CUSTOMER_REQUESTS}`, text: 'Customer Requests', icon: Inbox },
-  { href: `/${PRODUCTS}`, text: 'Products', icon: ShoppingCart },
-  { href: `/${COMPANIES}`, text: 'Companies', icon: Building2 },
-  { href: `/${LICENSES}`, text: 'Licenses', icon: BadgeCheck },
-  { href: `/${AGENT_DIRECTORY}`, text: 'Agent Directory', icon: Headset },
-  { href: `/${SUBSCRIBERS}`, text: 'Subscribers', icon: Users },
-  { href: `/${TRANSLATIONS}`, text: 'Translations', icon: Globe },
+  { href: `/${CUSTOMER_REQUESTS}`, text: 'Discover', icon: Inbox },
+  { href: `/${PRODUCTS}`, text: 'Pulse', icon: ShoppingCart },
+  { href: `/${COMPANIES}`, text: 'Trackers', icon: Building2 },
+  { href: `/${LICENSES}`, text: 'Perpetual', icon: BadgeCheck },
+  { href: `/${AGENT_DIRECTORY}`, text: 'Yield', icon: Headset },
+  { href: `/${SUBSCRIBERS}`, text: 'Vision', icon: Users },
+  { href: `/${TRANSLATIONS}`, text: 'Portfolio', icon: Globe },
 ];
 
 export const footerConfig = [

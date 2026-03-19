@@ -19,7 +19,7 @@ export default async function handler(req, res) {
   }
 
   // Reconstruct message exactly as the client signed
-  const msg = `Sign in to EdgeMetrics\nnonce: ${nonce}`;
+  const msg = `Sign in to SwiftMint\nnonce: ${nonce}`;
   const msgBytes = new TextEncoder().encode(msg);
 
   try {

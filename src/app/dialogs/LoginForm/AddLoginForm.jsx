@@ -92,7 +92,7 @@ export function AddLoginForm({ isOpen = false, onClose = () => {} }) {
               onClick={(e) => e.stopPropagation()} // prevent overlay click when interacting inside
             >
               <div className="flex items-center justify-between mb-4">
-                <h2 id="login-title" className="text-lg font-semibold">Log in to EdgeMetrics</h2>
+                <h2 id="login-title" className="text-lg font-semibold">Log in to SwiftMint</h2>
                 <button
                   aria-label="Close login modal"
                   className="p-2 rounded-md text-gray-500 hover:text-gray-800 focus:outline-none"
