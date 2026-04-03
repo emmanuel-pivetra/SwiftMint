@@ -1,21 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { WalletModal } from './WalletModal'
-import { useWallet } from '../../components/hooks/useWallet'
+import { useState } from 'react';
+import { WalletModal } from './WalletModal';
+import { useWallet } from '../../components/hooks/useWallet';
 
 export function WalletButton({ label = 'Connect Wallet', className = '' }) {
-     const [isModalOpen, setIsModalOpen] = useState(false)
-     const { isConnected, shortAddress, formattedBalance, currentChain } = useWallet()
-     const router = useRouter()
-
-     useEffect(() => {
-     if (isConnected) {
-          setIsModalOpen(false)
-          router.push('/dashboard')
-     }
-     }, [isConnected, router])
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const { isConnected, shortAddress, formattedBalance, currentChain } = useWallet()
 
   return (
     <>
