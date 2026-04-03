@@ -28,12 +28,12 @@ export default function Navbar() {
 
   return (
     <header className="flex justify-center h-16">
-      <div className="w-full sm:max-w-xl md:max-w-4xl fixed bg-[#FFF8F2] top-0 mx-auto z-50 px-4">
+      <div className="w-full sm:max-w-xl md:max-w-4xl border fixed bg-[#0B1019] top-0 mx-auto z-50 px-4">
         <div className="flex justify-between items-center h-16">
           {/* Logo + Brand */}
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-gray-900">SwiftMint</h1>
+              <h1 className="text-xl font-bold text-white">SwiftMint</h1>
             </div>
           </div>
 

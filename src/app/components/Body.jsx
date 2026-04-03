@@ -7,7 +7,7 @@ import Footer from './Footer'
 
 const Body = () => {
   return (
-     <div>
+     <div className='bg-[#0B1019]'>
           <HeroSection />
           <NewsSection />
           <DevicesSection />
