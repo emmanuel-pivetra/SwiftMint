@@ -2,7 +2,7 @@ import './globals.css';
 import { Web3Provider } from '../../src/app/components/Web3provider';
 
 export const metadata = {
-  title: 'Trading App',
+  title: 'SwiftMint',
   description: 'Professional crypto trading platform',
 }
 
