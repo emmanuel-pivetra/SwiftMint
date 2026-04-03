@@ -111,7 +111,7 @@ export function AddLoginForm({ isOpen = false, onClose = () => {} }) {
                     ref={emailRef}
                     name="email"
                     type="email"
-                    className="mt-1 w-full rounded-md border px-3 py-2 focus:ring-2 focus:ring-[#FF553E] outline-none"
+                    className="mt-1 w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-white placeholder:text-white/40 focus:ring-2 focus:ring-[#0B92F1] outline-none"
                     placeholder="you@example.com"
                     required
                   />
@@ -122,7 +122,7 @@ export function AddLoginForm({ isOpen = false, onClose = () => {} }) {
                   <input
                     name="password"
                     type="password"
-                    className="mt-1 w-full rounded-md border px-3 py-2 focus:ring-2 focus:ring-[#FF553E] outline-none"
+                    className="mt-1 w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-white placeholder:text-white/40 focus:ring-2 focus:ring-[#0B92F1] outline-none"
                     placeholder="Enter your password"
                     required
                   />

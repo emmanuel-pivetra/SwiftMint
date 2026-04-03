@@ -4,12 +4,12 @@ import heroDevices from "../../../public/images/trading.jpg";
 
 const HeroSection = () => {
   return (
-    <section className="relative px-6 overflow-hidden bg-[#0B1019]">
+    <section className="relative overflow-hidden py-20 md:py-28 bg-[#0B1019]">
       
       {/* Background Glow */}
-      <div className="absolute border border-red-600 inset-0 pointer-events-none" />
+      <div className="absolute inset-0 pointer-events-none" />
 
-      <div className="max-w-5xl mx-auto border px-6 flex flex-col md:flex-row items-center gap-5">
+      <div className="relative max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-5">
         
         {/* LEFT CONTENT */}
         <div className="flex-1 space-y-6">
@@ -43,14 +43,14 @@ const HeroSection = () => {
           {/* Glow behind image */}
           <div className="absolute inset-0 bg-[#0B92F1]/20 blur-3xl rounded-full" />
 
-          {/* <Image
+          <Image
             src={heroDevices}
             alt="Trading platform on multiple devices"
             width={1024}
             height={768}
             className="relative w-full max-w-lg mx-auto rounded-2xl shadow-2xl"
             priority
-          /> */}
+          />
         </div>
       </div>
     </section>
