@@ -8,18 +8,21 @@
     "start": "next start"
   },
   "dependencies": {
+    "@radix-ui/react-slot": "^1.2.4",
     "@solana/wallet-adapter-base": "^0.9.27",
     "@solana/wallet-adapter-phantom": "^0.9.28",
     "@solana/wallet-adapter-react": "^0.15.39",
     "@solana/wallet-adapter-react-ui": "^0.9.39",
     "@solana/web3.js": "^1.98.4",
     "bs58": "^6.0.0",
+    "class-variance-authority": "^0.7.1",
     "framer-motion": "^12.34.2",
     "lucide-react": "^0.575.0",
     "next": "^16.0.7",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-qr-code": "^2.0.18",
+    "tailwind-merge": "^3.5.0",
     "tweetnacl": "^1.0.3"
   },
   "devDependencies": {
