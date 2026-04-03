@@ -6,6 +6,7 @@ import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { NavItem } from "./nav/NavItem";
 import { navConfig } from "./nav/navConfig";
+import { WalletButton } from "./wallet/WalletButton";
 
 export default function SidebarClient() {
   const pathname = usePathname();
@@ -41,6 +42,7 @@ export default function SidebarClient() {
     }
 
     fetchBalance();
+    console.log(fetchBalance());
 
     try {
       // Subscribe to account changes so balance updates immediately
@@ -80,7 +82,7 @@ export default function SidebarClient() {
   return (
     <nav className="flex flex-col h-full gap-3 w-full">
           {/* Wallet summary — assumes wallet is connected already */}
-          <div className="mb-4 rounded-md border bg-white p-3 text-sm">
+          <div className="mb-4 rounded-md text-sm">
                {connected && publicKey ? (
                     <>
                     <div className="text-xs text-gray-500">Wallet</div>
@@ -94,9 +96,7 @@ export default function SidebarClient() {
                     </div>
                     </>
                ) : (
-                    <div className="text-sm text-gray-600">
-                    Wallet not connected.
-                    </div>
+                <WalletButton/>
                )}
           </div>
 

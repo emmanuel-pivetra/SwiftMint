@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { AddLoginForm } from "../dialogs/LoginForm/AddLoginForm";
+import { WalletButton } from "./wallet/WalletButton";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false); // mobile sidebar
@@ -49,17 +49,7 @@ export default function Navbar() {
 
           {/* Actions + Mobile Hamburger */}
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex gap-3">
-              <button
-                className="px-3 py-1 text-sm rounded-md text-[#FF553E]"
-                onClick={() => setShowLogin(true)}
-              >
-                Login
-              </button>
-              <button className="px-3 py-2 text-sm rounded-lg bg-[#FF553E] text-white">
-                Sign up
-              </button>
-            </div>
+            <WalletButton />
 
             {/* Hamburger for mobile */}
             <button
@@ -123,15 +113,7 @@ export default function Navbar() {
                   <a href="#"><li className="text-lg">Contact</li></a>
                 </ul>
 
-                <div className="mt-6 flex flex-col gap-3">
-                  <button
-                    className="w-full px-4 py-2 text-sm text-gray-900 rounded-md border border-[#FF553E]"
-                    onClick={openLoginFromMobile}
-                  >
-                    Login
-                  </button>
-                  <button className="w-full px-4 py-2 text-sm rounded-md bg-[#FF553E] text-white">SignUp</button>
-                </div>
+                <WalletButton /> 
 
                 <div className="mt-8 text-sm text-gray-500">© {new Date().getFullYear()} Saasto</div>
               </nav>
@@ -140,7 +122,6 @@ export default function Navbar() {
         )}
       </AnimatePresence>
 
-      <AddLoginForm isOpen={showLogin} onClose={() => setShowLogin(false)} />
     </header>
   );
 }
