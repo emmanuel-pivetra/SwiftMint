@@ -47,13 +47,6 @@ export default function Header({ chain = "SOL", onOpenDeposit = () => {} }) {
           Deposit
         </button>
 
-        {/* Icons */}
-        <div className="flex items-center gap-3 text-white/70 ml-3">
-          <Star className="h-5 w-5 cursor-pointer hover:text-white" />
-          <Bell className="h-5 w-5 cursor-pointer hover:text-white" />
-          <Wallet className="h-5 w-5 cursor-pointer hover:text-white" />
-        </div>
-
         {/* Profile */}
         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-yellow-400 text-xs font-semibold ml-3">
           DR

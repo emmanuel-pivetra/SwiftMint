@@ -1,5 +1,6 @@
 import { Play } from "lucide-react";
 
+
 const cards = [
   { tag: "CHF JPY", title: "", color: "bg-card", stat: "107.067", statSub: "+12% in 15 min" },
   { tag: "SECURE ACCOUNT", title: "You can now use your Fingerprint to access our Android App.", color: "bg-card-green/20 border border-card-green/30" },

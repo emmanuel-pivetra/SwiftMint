@@ -1,75 +1,117 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import QRCode from "react-qr-code";
 
-export default function DepositModal({ isOpen = false, onClose = () => {}, chain = "Solana", address = "", balance = 0 }) {
-  const modalRef = useRef(null);
-  const firstFocusRef = useRef(null);
-  const [activeTab, setActiveTab] = useState("Deposit");
-  const [copied, setCopied] = useState(false);
+// ── Demo data — replace with real values or pass as props ──────────────────
+const DEMO_WALLETS = [
+  {
+    chain:    "Ethereum",
+    symbol:   "ETH",
+    address:  "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
+    balance:  "1.4382",
+    network:  "ERC-20",
+    color:    "from-blue-500 to-indigo-500",
+    initial:  "E",
+  },
+  {
+    chain:    "Solana",
+    symbol:   "SOL",
+    address:  "AXkxB9Gnd8ncGybpBfQyYwzzjVqR96ptqeawausJnrzn",
+    balance:  "12.8801",
+    network:  "Solana",
+    color:    "from-purple-500 to-pink-500",
+    initial:  "S",
+  },
+  {
+    chain:    "BNB Chain",
+    symbol:   "BNB",
+    address:  "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
+    balance:  "3.2100",
+    network:  "BEP-20",
+    color:    "from-yellow-400 to-orange-400",
+    initial:  "B",
+  },
+  {
+    chain:    "Polygon",
+    symbol:   "MATIC",
+    address:  "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
+    balance:  "540.00",
+    network:  "Polygon",
+    color:    "from-purple-400 to-indigo-400",
+    initial:  "P",
+  },
+];
 
-  // lock body scroll while modal open
+// ─────────────────────────────────────────────────────────────────────────────
+
+export default function DepositModal({
+  isOpen   = false,
+  onClose  = () => {},
+  // Pass real wallet data here once ready, otherwise uses demo
+  wallets  = DEMO_WALLETS,
+}) {
+  const modalRef      = useRef(null);
+  const firstFocusRef = useRef(null);
+
+  const [activeTab,    setActiveTab]    = useState("Deposit");
+  const [activeWallet, setActiveWallet] = useState(0);
+  const [copied,       setCopied]       = useState(false);
+
+  const wallet = wallets[activeWallet];
+
+  // Lock body scroll
   useEffect(() => {
-    if (isOpen) {
-      const prev = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-      return () => {
-        document.body.style.overflow = prev;
-      };
-    }
+    if (!isOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
   }, [isOpen]);
 
-  // focus & ESC
-     useEffect(() => {
-          if (!isOpen) return;
-          const focusTimer = setTimeout(() => firstFocusRef.current?.focus(), 80);
-          function onKey(e) {
-               if (e.key === "Escape") onClose();
-          }
-          window.addEventListener("keydown", onKey);
-          return () => {
-               clearTimeout(focusTimer);
-               window.removeEventListener("keydown", onKey);
-          };
-     }, [isOpen, onClose]);
+  // Focus trap + ESC
+  useEffect(() => {
+    if (!isOpen) return;
+    const t = setTimeout(() => firstFocusRef.current?.focus(), 80);
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => { clearTimeout(t); window.removeEventListener("keydown", onKey); };
+  }, [isOpen, onClose]);
 
-     async function handleCopy() {
-          try {
-               await navigator.clipboard.writeText(address || "");
-               setCopied(true);
-               setTimeout(() => setCopied(false), 1400);
-          } catch (err) {
-               console.error("copy failed", err);
-          }
-     }
+  async function handleCopy(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1400);
+    } catch (err) {
+      console.error("copy failed", err);
+    }
+  }
 
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Full-page overlay with blur */}
+          {/* Overlay */}
           <motion.div
             key="overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
-            className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-lg"
+            className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-lg"
             onClick={onClose}
             aria-hidden="true"
           />
 
-          {/* Centered modal */}
+          {/* Modal */}
           <motion.div
             key="modal"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.98 }}
-            transition={{ type: "spring", stiffness: 300, damping: 26 }}
-            className="fixed left-1/2 top-1/2 z-[70] p-4 transform -translate-x-1/2 -translate-y-1/2"
-            onClick={onClose}
+            initial={{ opacity: 0, scale: 0.97, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.97, y: 12 }}
+            transition={{ type: "spring", stiffness: 320, damping: 28 }}
+            className="fixed left-1/2 top-1/2 z-[70] -translate-x-1/2 -translate-y-1/2 w-full max-w-md px-4"
           >
             <div
               ref={modalRef}
@@ -77,21 +119,31 @@ export default function DepositModal({ isOpen = false, onClose = () => {}, chain
               role="dialog"
               aria-modal="true"
               aria-labelledby="deposit-title"
-              className="w-full max-w-md rounded-2xl bg-[#0f0f11] text-white shadow-2xl ring-1 ring-white/6 max-h-[90vh] overflow-auto"
+              className="w-full rounded-2xl bg-[#0f0f11] text-white shadow-2xl ring-1 ring-white/10 max-h-[90vh] overflow-auto"
             >
-              <div className="flex items-center justify-between px-5 py-4 border-b border-white/6">
-                <h3 id="deposit-title" className="text-lg font-semibold">Exchange</h3>
-                <button aria-label="Close deposit dialog" onClick={onClose} className="rounded-md px-2 py-1 text-white/60 hover:text-white focus:outline-none">✕</button>
+
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+                <h3 id="deposit-title" className="text-base font-semibold">Exchange</h3>
+                <button
+                  aria-label="Close"
+                  onClick={onClose}
+                  className="text-white/50 hover:text-white transition-colors text-lg leading-none"
+                >✕</button>
               </div>
 
+              {/* Tabs */}
               <div className="px-4 pt-4">
-                <div className="flex gap-2 rounded-xl bg-white/3 p-1">
+                <div className="flex gap-1 rounded-xl bg-white/5 p-1">
                   {["Convert", "Deposit", "Buy"].map((t) => (
                     <button
                       key={t}
                       onClick={() => setActiveTab(t)}
-                      className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition ${activeTab === t ? "bg-[#141416] text-white shadow-sm" : "text-white/60 hover:text-white"}`}
-                      aria-pressed={activeTab === t}
+                      className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                        activeTab === t
+                          ? "bg-[#1a1a1e] text-white shadow-sm"
+                          : "text-white/50 hover:text-white"
+                      }`}
                     >
                       {t}
                     </button>
@@ -99,52 +151,96 @@ export default function DepositModal({ isOpen = false, onClose = () => {}, chain
                 </div>
               </div>
 
-              <div className="px-5 py-5">
-                <div className="flex items-center justify-between gap-3">
+              <div className="px-5 py-5 flex flex-col gap-5">
+
+                {/* Chain selector */}
+                <div>
+                  <p className="text-xs text-white/50 mb-2 uppercase tracking-wider">Select Network</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {wallets.map((w, i) => (
+                      <button
+                        key={w.chain}
+                        onClick={() => setActiveWallet(i)}
+                        className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-all border ${
+                          activeWallet === i
+                            ? "border-white/20 bg-white/10 text-white"
+                            : "border-white/5 bg-white/[0.03] text-white/60 hover:bg-white/5 hover:text-white"
+                        }`}
+                      >
+                        <div className={`w-7 h-7 rounded-md bg-gradient-to-br ${w.color} flex items-center justify-center text-xs font-bold text-white flex-shrink-0`}>
+                          {w.initial}
+                        </div>
+                        <div className="text-left">
+                          <div className="font-medium text-xs">{w.chain}</div>
+                          <div className="text-[10px] text-white/40">{w.network}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Balance pill */}
+                <div className="flex items-center justify-between rounded-xl bg-white/5 px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-md bg-gradient-to-br from-indigo-500 to-cyan-400 text-black text-sm font-bold">
-                      {chain?.[0] ?? "S"}
+                    <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${wallet.color} flex items-center justify-center font-bold text-sm text-white`}>
+                      {wallet.initial}
                     </div>
-
                     <div>
-                      <div className="text-sm font-medium">{chain}</div>
-                      <div className="text-xs text-white/60">Only deposit {chain} through the {chain} network for this address.</div>
+                      <div className="text-sm font-semibold">{wallet.chain}</div>
+                      <div className="text-xs text-white/50">{wallet.network} network</div>
                     </div>
                   </div>
-
-                  <div className="text-sm text-white/60">Balance: <span className="text-white ml-1">{balance} {chain === "Solana" ? "SOL" : ""}</span></div>
+                  <div className="text-right">
+                    <div className="text-xs text-white/50">Balance</div>
+                    <div className="text-sm font-semibold">{wallet.balance} {wallet.symbol}</div>
+                  </div>
                 </div>
 
-                <div className="mt-4 flex flex-col items-center gap-4">
-                  <div className="rounded-lg bg-white p-3 text-black">
-                    <QRCode value={address || "dummy:address"} size={156} />
+                {/* Warning */}
+                <div className="flex gap-2 rounded-xl bg-yellow-500/10 border border-yellow-500/20 px-4 py-3">
+                  <span className="text-yellow-400 text-base leading-none mt-0.5">⚠</span>
+                  <p className="text-xs text-yellow-200/80 leading-relaxed">
+                    Only send <strong>{wallet.symbol}</strong> via the <strong>{wallet.network}</strong> network to this address. Sending other assets may result in permanent loss.
+                  </p>
+                </div>
+
+                {/* QR + address */}
+                <div className="flex flex-col items-center gap-4">
+                  <div className="rounded-xl bg-white p-3">
+                    <QRCode value={wallet.address} size={148} />
                   </div>
 
-                  <div className="w-full rounded-md border border-white/6 bg-[#0b0b0c] p-3 text-sm">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1">
-                        <div className="text-xs text-white/60">Deposit Address</div>
-                        <div className="mt-1 break-all font-mono text-sm">{address || "8oXsvS3Ggyrb2z37bNyordBkxXbEdGWLeBEeo2VwwJEwf"}</div>
-                      </div>
-
-                      <div className="flex flex-col items-end gap-2">
-                        <button ref={firstFocusRef} onClick={handleCopy} className="rounded-md bg-gradient-to-br from-blue-500 to-purple-500 px-3 py-2 text-xs font-medium">
-                          {copied ? "Copied!" : "Copy"}
-                        </button>
-                      </div>
+                  <div className="w-full rounded-xl border border-white/10 bg-[#0b0b0c] p-4">
+                    <div className="text-xs text-white/50 mb-1.5">Deposit Address</div>
+                    <div className="font-mono text-sm break-all text-white leading-relaxed">
+                      {wallet.address}
                     </div>
-                  </div>
-
-                  <div className="text-sm text-white/60">
-                    Don't have any {chain}? <a className="text-blue-400 underline" href="https://onramper.com" target="_blank" rel="noreferrer">Buy through Onramper</a>.
+                    <button
+                      ref={firstFocusRef}
+                      onClick={() => handleCopy(wallet.address)}
+                      className={`mt-3 w-full rounded-lg px-4 py-2 text-xs font-semibold transition-all ${
+                        copied
+                          ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                          : "bg-white/10 hover:bg-white/15 text-white"
+                      }`}
+                    >
+                      {copied ? "✓ Copied!" : "Copy Address"}
+                    </button>
                   </div>
                 </div>
 
-                <div className="mt-6 px-1">
-                  <button onClick={() => { navigator.clipboard.writeText(address || ""); setCopied(true); setTimeout(()=>setCopied(false),1400); }} className="w-full rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 px-4 py-2 text-sm font-semibold">
-                    Copy Address
-                  </button>
-                </div>
+                {/* Buy link */}
+                <p className="text-center text-sm text-white/50">
+                  Don't have any {wallet.symbol}?{" "}
+                  <a
+                    href="https://onramper.com"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-blue-400 hover:text-blue-300 underline transition-colors"
+                  >
+                    Buy through Onramper
+                  </a>
+                </p>
               </div>
             </div>
           </motion.div>
