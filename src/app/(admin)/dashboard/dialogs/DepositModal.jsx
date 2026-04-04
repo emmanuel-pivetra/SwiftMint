@@ -135,7 +135,7 @@ export default function DepositModal({
               {/* Tabs */}
               <div className="px-4 pt-4">
                 <div className="flex gap-1 rounded-xl bg-white/5 p-1">
-                  {["Convert", "Deposit", "Buy"].map((t) => (
+                  {["Deposit"].map((t) => (
                     <button
                       key={t}
                       onClick={() => setActiveTab(t)}
@@ -176,23 +176,6 @@ export default function DepositModal({
                         </div>
                       </button>
                     ))}
-                  </div>
-                </div>
-
-                {/* Balance pill */}
-                <div className="flex items-center justify-between rounded-xl bg-white/5 px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${wallet.color} flex items-center justify-center font-bold text-sm text-white`}>
-                      {wallet.initial}
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold">{wallet.chain}</div>
-                      <div className="text-xs text-white/50">{wallet.network} network</div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-xs text-white/50">Balance</div>
-                    <div className="text-sm font-semibold">{wallet.balance} {wallet.symbol}</div>
                   </div>
                 </div>
 

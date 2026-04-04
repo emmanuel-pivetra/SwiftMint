@@ -1,59 +1,41 @@
 "use client";
 
-import { useState } from "react";
-import { Bell, Star, Wallet, Settings, Search, ChevronDown } from "lucide-react";
-import { useRouter } from "next/navigation";
-
-export default function Header({ chain = "SOL", onOpenDeposit = () => {} }) {
-  const router = useRouter();
-  const [openChainMenu, setOpenChainMenu] = useState(false);
-
+// Pass onToggleSidebar from DashboardPage to show the hamburger on mobile
+export default function Header({ chain, onOpenDeposit, onToggleSidebar }) {
   return (
-    <header className="sticky top-0 z-50 w-full h-16 border-b border-white/10 bg-black/80 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-full items-center gap-6 px-6">
-        {/* Logo */}
-        <div className="flex cursor-pointer items-center gap-2" onClick={() => router.push("/")}>
-          <span className="text-lg font-semibold tracking-wide text-white">SwiftMint</span>
-        </div>
+    <header className="sticky top-0 z-30 w-full border-b border-white/10 bg-gray-900/80 backdrop-blur-md">
+      <div className="flex items-center justify-between px-4 h-14 max-w-screen-2xl mx-auto">
 
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {/* Search */}
-        <div className="relative hidden w-[280px] md:block">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-white/40" />
-          <input
-            placeholder="Search by token or CA..."
-            className="h-9 w-full rounded-full border border-white/10 bg-white/5 pl-9 pr-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          />
-          <kbd className="absolute right-2 top-2 rounded bg-white/10 px-1.5 py-0.5 text-xs text-white/50">/</kbd>
-        </div>
-
-        {/* Chain Selector (simple) */}
-        <div className="relative">
+        {/* Left — hamburger (mobile only) + brand */}
+        <div className="flex items-center gap-3">
           <button
-            onClick={() => setOpenChainMenu((s) => !s)}
-            className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white hover:bg-white/10"
+            onClick={onToggleSidebar}
+            className="md:hidden p-2 rounded-md text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+            aria-label="Open menu"
           >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
+          <span className="text-white font-bold text-base">SwiftMint</span>
+        </div>
+
+        {/* Right — chain badge + deposit button */}
+        <div className="flex items-center gap-2">
+          <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/15 border border-purple-500/25 text-purple-300 text-xs font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
             {chain}
+          </span>
+          <button
+            onClick={onOpenDeposit}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 transition-colors text-white text-xs font-semibold"
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+              <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+            </svg>
+            Deposit
           </button>
         </div>
-
-        {/* Deposit — delegated to parent via callback */}
-        <button
-          onClick={onOpenDeposit}
-          className="ml-3 rounded-full bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-500"
-        >
-          Deposit
-        </button>
-
-        {/* Profile */}
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-yellow-400 text-xs font-semibold ml-3">
-          DR
-        </div>
-
-        {/* Settings */}
-        <Settings className="h-5 w-5 cursor-pointer text-white/70 hover:text-white ml-3" />
       </div>
     </header>
   );
