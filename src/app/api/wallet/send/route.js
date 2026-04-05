@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
-import { sendSOL } from "../../lib/custodial-wallet";
+import { sendSOL } from "@/src/app/lib/custodial-wallet";
 
 export async function POST(req) {
   try {
