@@ -1,17 +1,17 @@
 import React from 'react'
 import HeroSection from './HeroSection'
 import NewsSection from './NewsSection'
-import DevicesSection from './DevicesSection'
 import FeaturesSection from './FeaturesSection'
 import Footer from './Footer'
+import FAQSection from './FAQSection'
 
 const Body = () => {
   return (
      <div className='bg-[#0B1019]'>
           <HeroSection />
           <NewsSection />
-          <DevicesSection />
           <FeaturesSection />
+          <FAQSection />
           <Footer />
     </div>
   )

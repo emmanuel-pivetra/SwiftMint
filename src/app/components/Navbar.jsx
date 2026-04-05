@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { WalletButton } from "./wallet/WalletButton";
 import AuthModal from "./AuthModal";
 import { useUser } from "./hooks/useUser";
 
@@ -38,7 +37,7 @@ export default function Navbar() {
     <>
       <header className="w-full h-16">
         <div className="fixed top-0 left-0 w-full z-50 bg-[#0B1019] border-b border-white/10">
-          <div className="max-w-6xl mx-auto px-4 flex justify-between items-center h-16">
+          <div className="px-6 md:px-12 max-w-7xl mx-auto flex justify-between items-center h-16">
 
             {/* Logo */}
             <div className="flex items-center gap-2">
@@ -233,9 +232,6 @@ export default function Navbar() {
                     </button>
                   </div>
                 )}
-
-                <WalletButton />
-
                 <p className="text-xs text-gray-600 mt-auto">
                   © {new Date().getFullYear()} SwiftMint
                 </p>

@@ -1,23 +1,52 @@
 import { Play } from "lucide-react";
 
-
 const cards = [
-  { tag: "CHF JPY", title: "", color: "bg-card", stat: "107.067", statSub: "+12% in 15 min" },
-  { tag: "SECURE ACCOUNT", title: "You can now use your Fingerprint to access our Android App.", color: "bg-card-green/20 border border-card-green/30" },
-  { tag: "WEBINAR", title: 'Trading Strategy "Triple Ricochet"', color: "bg-card-blue/20 border border-card-blue/30", hasPlay: true },
-  { tag: "EDUCATION", title: "How to start trading on the platform?", color: "bg-card-blue/20 border border-card-blue/30", hasPlay: true },
-  { tag: "TRADE", title: "", color: "bg-card" },
-  { tag: "ANNIVERSARY", title: "Our Broker has been trailblazing the industry for the past 5 years", color: "bg-card-purple/20 border border-card-purple/30" },
+  {
+    tag: "MARKET PULSE",
+    title: "",
+    color: "bg-card",
+    stat: "$PEPE",
+    statSub: "+340% in 7 days",
+  },
+  {
+    tag: "TRADING ALERT",
+    title: "Dogecoin surges 18% as social media volume hits a 6-month high. Momentum traders eye the $0.25 resistance level.",
+    color: "bg-card-green/20 border border-card-green/30",
+  },
+  {
+    tag: "WEBINAR",
+    title: 'How to Trade Memecoins: "Ride the Wave, Not the Hype"',
+    color: "bg-card-blue/20 border border-card-blue/30",
+    hasPlay: true,
+  },
+  {
+    tag: "EDUCATION",
+    title: "What makes a memecoin pump? Community, liquidity, and timing explained.",
+    color: "bg-card-blue/20 border border-card-blue/30",
+    hasPlay: true,
+  },
+  {
+    tag: "SPOTLIGHT",
+    title: "",
+    color: "bg-card",
+    stat: "$WIF",
+    statSub: "Top gainer this week",
+  },
+  {
+    tag: "INSIGHT",
+    title: "From DOGE to BONK — how memecoins evolved from jokes to a $50B asset class worth watching.",
+    color: "bg-card-purple/20 border border-card-purple/30",
+  },
 ];
 
 const NewsSection = () => {
   return (
     <section className="px-6 md:px-12 py-16 max-w-7xl mx-auto">
       <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-        The latest from our broker
+        The latest in memecoin trading
       </h2>
       <p className="text-muted-foreground mb-10">
-        New features, latest webinars and more...
+        Market moves, education, and opportunities across the memecoin space.
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
