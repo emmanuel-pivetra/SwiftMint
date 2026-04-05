@@ -1,22 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useWallet, SUPPORTED_CHAINS } from "../components/hooks/useWallet";
 import { NavItem } from "./nav/NavItem";
 import { navConfig } from "./nav/navConfig";
-import { WalletButton } from "./wallet/WalletButton";
+import { useUser } from "./hooks/useUser";
+import ImportWalletModal from "../(admin)/dashboard/dialogs/ImportWalletModal";
 
-const CHAIN_ICONS = {
-  1:     "⟠",
-  137:   "⬡",
-  42161: "◆",
-  10:    "○",
-  8453:  "▲",
-  56:    "◈",
-};
-
-function FundAccountModal({ onClose }) {
+function FundAccountModal({ onClose, onDeposit }) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
@@ -32,14 +23,20 @@ function FundAccountModal({ onClose }) {
         <div className="text-center">
           <h2 className="text-white font-semibold text-lg">Fund Your Trading Account</h2>
           <p className="text-gray-400 text-sm mt-2 leading-relaxed">
-            You need to deposit funds into your trading account before you can access this feature.
+            You need to deposit funds before you can access this feature.
           </p>
         </div>
         <div className="flex flex-col gap-2 mt-2">
-          <button onClick={onClose} className="w-full py-2.5 rounded-lg bg-yellow-500 hover:bg-yellow-400 transition-colors text-black font-semibold text-sm">
-            Fund Account
+          <button
+            onClick={() => { onClose(); onDeposit?.(); }}
+            className="w-full py-2.5 rounded-lg bg-yellow-500 hover:bg-yellow-400 transition-colors text-black font-semibold text-sm"
+          >
+            Deposit SOL
           </button>
-          <button onClick={onClose} className="w-full py-2.5 rounded-lg border border-white/10 hover:bg-white/5 transition-colors text-gray-400 text-sm">
+          <button
+            onClick={onClose}
+            className="w-full py-2.5 rounded-lg border border-white/10 hover:bg-white/5 transition-colors text-gray-400 text-sm"
+          >
             Maybe Later
           </button>
         </div>
@@ -48,134 +45,157 @@ function FundAccountModal({ onClose }) {
   );
 }
 
-function NetworkSwitcher({ currentChain, switchChain, isSwitchingChain }) {
-  const [open, setOpen] = useState(false);
-
+function WalletSkeleton() {
   return (
-    <div className="relative mt-3">
-      <div className="text-xs text-gray-500 mb-1">Network</div>
-
-      {/* Current chain button */}
-      <button
-        onClick={() => setOpen((s) => !s)}
-        disabled={isSwitchingChain}
-        className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 border border-white/10 transition-colors text-sm text-white disabled:opacity-50"
-      >
-        <span className="flex items-center gap-2">
-          <span>{CHAIN_ICONS[currentChain?.id] ?? "🔗"}</span>
-          <span>{isSwitchingChain ? "Switching…" : (currentChain?.name ?? "Unknown")}</span>
-        </span>
-        <svg
-          width="14" height="14" viewBox="0 0 24 24" fill="none"
-          className={`text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
-        >
-          <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
-
-      {/* Dropdown */}
-      {open && (
-        <div className="absolute top-full left-0 right-0 mt-1 z-30 bg-gray-800 border border-white/10 rounded-lg overflow-hidden shadow-xl">
-          {SUPPORTED_CHAINS.map((chain) => {
-            const isActive = chain.id === currentChain?.id;
-            return (
-              <button
-                key={chain.id}
-                onClick={() => { switchChain(chain.id); setOpen(false); }}
-                disabled={isActive || isSwitchingChain}
-                className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-sm transition-colors
-                  ${isActive
-                    ? "bg-white/5 text-white cursor-default"
-                    : "text-gray-300 hover:bg-white/5 hover:text-white"
-                  }`}
-              >
-                <span>{CHAIN_ICONS[chain.id] ?? "🔗"}</span>
-                <span className="flex-1 text-left">{chain.name}</span>
-                {isActive && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 flex-shrink-0" />
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
+    <div className="animate-pulse flex flex-col gap-2">
+      <div className="h-3 w-16 bg-white/10 rounded" />
+      <div className="h-4 w-32 bg-white/10 rounded" />
+      <div className="h-3 w-12 bg-white/10 rounded mt-2" />
+      <div className="h-6 w-24 bg-white/10 rounded" />
     </div>
   );
 }
 
-export default function SidebarClient() {
+export default function SidebarClient({ onOpenDeposit }) {
   const pathname = usePathname();
   const router   = useRouter();
   const isActive = (href) => pathname === href || pathname.startsWith(`${href}/`);
 
-  const {
-    isConnected,
-    shortAddress,
-    formattedBalance,
-    currentChain,
-    isSwitchingChain,
-    disconnect,
-    switchChain,
-  } = useWallet();
+  const { user, loading: userLoading, signOut, initials } = useUser();
 
+  const [wallet,        setWallet]        = useState(null);
+  const [walletLoading, setWalletLoading] = useState(true);
   const [showFundModal, setShowFundModal] = useState(false);
+
+  const [showImport, setShowImport] = useState(false);
+
+  // Fetch custodial wallet for the logged-in user
+  useEffect(() => {
+    if (!user) { setWallet(null); setWalletLoading(false); return; }
+
+    async function fetchWallet() {
+      try {
+        const res = await fetch("/api/wallet/me");
+        if (!res.ok) throw new Error("Failed");
+        const data = await res.json();
+        setWallet(data);
+      } catch {
+        setWallet(null);
+      } finally {
+        setWalletLoading(false);
+      }
+    }
+
+    fetchWallet();
+    const interval = setInterval(fetchWallet, 15_000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   function handleNavClick(e) {
     e.preventDefault();
     setShowFundModal(true);
   }
 
-  function handleDisconnect() {
-    disconnect();
+  async function handleSignOut() {
+    await signOut();
     router.push("/");
   }
 
+  const shortAddress = wallet?.address
+    ? `${wallet.address.slice(0, 6)}…${wallet.address.slice(-4)}`
+    : null;
+
+  const displayBalance = wallet?.balance != null
+    ? `${Number(wallet.balance).toFixed(4)} SOL`
+    : "0.0000 SOL";
+
   return (
     <>
-      {showFundModal && <FundAccountModal onClose={() => setShowFundModal(false)} />}
+      {showFundModal && (
+        <FundAccountModal
+          onClose={() => setShowFundModal(false)}
+          onDeposit={onOpenDeposit}
+        />
+      )}
 
-      <nav className="flex flex-col h-full gap-3 w-full">
+      <nav className="flex flex-col mx-auto gap-3 w-full">
 
-        {/* Wallet summary */}
+        {/* ── Wallet / Auth summary ── */}
         <div className="mb-4 rounded-md text-sm">
-          {isConnected && shortAddress ? (
+          {userLoading || walletLoading ? (
+            <WalletSkeleton />
+          ) : user && wallet ? (
+            // Logged in + wallet exists
             <>
-              <div className="text-xs text-gray-500">Wallet</div>
-              <div className="mt-1 font-medium break-all text-white">{shortAddress}</div>
-
-              <div className="mt-3">
-                <div className="text-xs text-gray-500">Balance</div>
-                <div className="text-lg font-semibold text-white">
-                  {formattedBalance ?? "—"}
+              {/* User info */}
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+                  {initials}
+                </div>
+                <div className="truncate text-xs text-gray-400">
+                  {user.user_metadata?.full_name || user.email}
                 </div>
               </div>
 
-              {/* Network switcher */}
-              <NetworkSwitcher
-                currentChain={currentChain}
-                switchChain={switchChain}
-                isSwitchingChain={isSwitchingChain}
+              {/* Wallet address */}
+              <div className="text-xs text-gray-500">Wallet</div>
+              <div className="mt-1 font-mono text-sm text-white">{shortAddress}</div>
+
+              {/* Balance */}
+              <div className="mt-3">
+                <div className="text-xs text-gray-500">SOL Balance</div>
+                <div className="text-lg font-semibold text-white">{displayBalance}</div>
+              </div>
+
+              <button
+              className="mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-green-500/20 hover:bg-red-500/10 transition-colors text-green-400 hover:text-green-300 text-xs"
+               onClick={() => setShowImport(true)}>
+                Import
+              </button>
+
+              <ImportWalletModal
+                isOpen={showImport}
+                onClose={() => setShowImport(false)}
+                onSuccess={(address) => {
+                  setShowImport(false);
+                  fetchWallet(); // refresh balance
+                }}
               />
 
-              {/* Disconnect */}
+              {/* Sign out */}
               <button
-                onClick={handleDisconnect}
+                onClick={handleSignOut}
                 className="mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-red-500/20 hover:bg-red-500/10 transition-colors text-red-400 hover:text-red-300 text-xs"
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
                   <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"
                     stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                Disconnect
+                Sign out
               </button>
+              
             </>
           ) : (
-            <h3>Connect</h3>
-            // <WalletButton />
+            // Not logged in
+            <div className="flex flex-col gap-2">
+              <p className="text-xs text-gray-500 mb-1">Sign in to access your wallet</p>
+              <button
+                onClick={() => router.push("/?login=true")}
+                className="w-full py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 transition-colors text-white text-xs font-semibold"
+              >
+                Log in
+              </button>
+              <button
+                onClick={() => router.push("/?signup=true")}
+                className="w-full py-2.5 rounded-lg border border-white/10 hover:bg-white/5 transition-colors text-gray-400 text-xs"
+              >
+                Create account
+              </button>
+            </div>
           )}
         </div>
 
-        {/* Nav items */}
+        {/* ── Nav items ── */}
         <div className="flex flex-col gap-3 h-full">
           {navConfig.map((item) => (
             <div key={item.href} onClick={handleNavClick} className="cursor-pointer">
