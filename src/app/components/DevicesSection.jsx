@@ -13,7 +13,7 @@ const DevicesSection = () => {
         <span className="font-semibold text-foreground">
           trading at your desk or on the go
         </span>{" "}
-        — Axioms has got you covered
+        — SwiftMint has got you covered
       </p>
 
       <div className="flex flex-col md:flex-row items-center gap-12">

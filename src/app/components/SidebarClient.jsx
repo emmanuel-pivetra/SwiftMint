@@ -170,7 +170,8 @@ export default function SidebarClient() {
               </button>
             </>
           ) : (
-            <WalletButton />
+            <h3>Connect</h3>
+            // <WalletButton />
           )}
         </div>
 

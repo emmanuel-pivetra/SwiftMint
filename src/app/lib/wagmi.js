@@ -3,7 +3,7 @@ import { mainnet, polygon, arbitrum, optimism, base, bsc } from 'wagmi/chains'
 import { injected, walletConnect, coinbaseWallet, metaMask } from 'wagmi/connectors'
 
 // Get your WalletConnect Project ID at https://cloud.walletconnect.com
-const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
+const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
 
 if (!projectId) {
   throw new Error('NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID is not set in .env.local')

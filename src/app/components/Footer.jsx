@@ -28,7 +28,7 @@ const Footer = () => {
         </div>
       </div>
       <div className="mt-8 pt-6 border-t border-border text-xs text-muted-foreground">
-        © 2026 Axioms. All rights reserved.
+        © 2026 SwiftMint. All rights reserved.
       </div>
     </footer>
   );

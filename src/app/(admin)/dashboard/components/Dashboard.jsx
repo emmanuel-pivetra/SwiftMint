@@ -1,134 +1,126 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useWallet, useConnection } from "@solana/wallet-adapter-react";
-import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import DashboardClient from "./DashboardClient";
 import DepositModal from "../dialogs/DepositModal";
+import SendModal from "../dialogs/SendModal";
 
 export default function Dashboard() {
-  const { publicKey, connected } = useWallet();
-  const { connection } = useConnection();
+  const [wallet,      setWallet]      = useState(null); // { address, balance, symbol }
+  const [loading,     setLoading]     = useState(true);
+  const [showDeposit, setShowDeposit] = useState(false);
+  const [showSend,    setShowSend]    = useState(false);
 
-  const [solBalance,   setSolBalance]   = useState(null);
-  const [loading,      setLoading]      = useState(false);
-  const [showDeposit,  setShowDeposit]  = useState(false);
-
-  // Fetch balance + subscribe to real-time account changes
-  useEffect(() => {
-    if (!publicKey || !connected) { setSolBalance(null); return; }
-
-    let mounted = true;
-    let subId   = null;
-
-    async function fetchBalance() {
-      setLoading(true);
-      try {
-        const lamports = await connection.getBalance(publicKey, "confirmed");
-        if (mounted) setSolBalance(lamports / LAMPORTS_PER_SOL);
-      } catch (err) {
-        console.error("[Dashboard] fetchBalance error:", err);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    }
-
-    fetchBalance();
-
-    // Live updates whenever the account changes (e.g. after a deposit)
+  async function fetchWallet() {
     try {
-      subId = connection.onAccountChange(
-        publicKey,
-        (info) => {
-          if (mounted && info?.lamports != null) {
-            setSolBalance(info.lamports / LAMPORTS_PER_SOL);
-          }
-        },
-        "confirmed"
-      );
-    } catch {
-      // Fallback: poll every 10s if onAccountChange isn't supported
-      const poll = setInterval(fetchBalance, 10_000);
-      subId = { poll };
+      const res = await fetch("/api/wallet/me");
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      setWallet(data);
+    } catch (err) {
+      console.error("[Dashboard] fetchWallet:", err);
+    } finally {
+      setLoading(false);
     }
+  }
 
-    return () => {
-      mounted = false;
-      if (typeof subId === "number") {
-        connection.removeAccountChangeListener(subId).catch(() => {});
-      } else if (subId?.poll) {
-        clearInterval(subId.poll);
-      }
-    };
-  }, [publicKey?.toBase58(), connection, connected]);
+  useEffect(() => {
+    fetchWallet();
+    // Poll every 15s so balance updates after a deposit
+    const interval = setInterval(fetchWallet, 15_000);
+    return () => clearInterval(interval);
+  }, []);
 
   const displayBalance = loading
     ? "..."
-    : solBalance != null
-    ? `${solBalance.toFixed(4)} SOL`
+    : wallet?.balance != null
+    ? `${Number(wallet.balance).toFixed(4)} SOL`
     : "0.0000 SOL";
 
-  const solAddress = publicKey?.toBase58() ?? "";
-
   return (
-    <div className="p-6 w-full">
+    <div className="p-4 md:p-6 w-full">
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mb-6">
 
-        {/* Balance card */}
-        <div className="rounded-xl border border-white/10 bg-gray-900 p-5 shadow-sm">
+        {/* Balance */}
+        <div className="rounded-xl border border-white/10 bg-gray-900 p-4 md:p-5">
           <div className="flex items-center justify-between mb-2">
             <div className="text-xs uppercase tracking-wide text-gray-400">SOL Balance</div>
-            <button
-              onClick={() => setShowDeposit(true)}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 text-purple-300 text-xs font-medium transition-colors"
-            >
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
-                <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-              </svg>
-              Deposit
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowDeposit(true)}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 text-purple-300 text-xs font-medium transition-colors"
+              >
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                </svg>
+                Deposit
+              </button>
+              <button
+                onClick={() => setShowSend(true)}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-300 text-xs font-medium transition-colors"
+              >
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                  <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Send
+              </button>
+            </div>
           </div>
-          <div className="text-2xl font-semibold text-white">
-            {connected ? displayBalance : "0.0000 SOL"}
-          </div>
+          <div className="text-xl md:text-2xl font-semibold text-white">{displayBalance}</div>
+          {wallet?.address && (
+            <div className="mt-1 text-xs text-gray-600 font-mono truncate">
+              {wallet.address.slice(0, 8)}…{wallet.address.slice(-6)}
+            </div>
+          )}
           <div className="mt-1 text-sm text-gray-500">Available to trade</div>
         </div>
 
         {/* 24h PnL */}
-        <div className="rounded-xl border border-white/10 bg-gray-900 p-5 shadow-sm">
+        <div className="rounded-xl border border-white/10 bg-gray-900 p-4 md:p-5">
           <div className="text-xs uppercase tracking-wide text-gray-400">24h PnL</div>
-          <div className="mt-2 text-2xl font-semibold text-green-400">+$0.00</div>
+          <div className="mt-2 text-xl md:text-2xl font-semibold text-green-400">+$0.00</div>
           <div className="mt-1 text-sm text-gray-500">Since last session</div>
         </div>
 
         {/* Open Positions */}
-        <div className="rounded-xl border border-white/10 bg-gray-900 p-5 shadow-sm">
+        <div className="rounded-xl border border-white/10 bg-gray-900 p-4 md:p-5 sm:col-span-2 lg:col-span-1">
           <div className="text-xs uppercase tracking-wide text-gray-400">Open Positions</div>
-          <div className="mt-2 text-2xl font-semibold text-white">0</div>
+          <div className="mt-2 text-xl md:text-2xl font-semibold text-white">0</div>
           <div className="mt-1 text-sm text-gray-500">Currently active</div>
         </div>
-
       </div>
 
-      <DashboardClient />
+      {/* Token table */}
+      <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
+        <DashboardClient />
+      </div>
 
-      {/* Deposit modal — Solana only */}
+      {/* Deposit modal */}
       <DepositModal
         isOpen={showDeposit}
         onClose={() => setShowDeposit(false)}
-        wallets={[
-          {
-            chain:   "Solana",
-            symbol:  "SOL",
-            address: "AXkxB9Gnd8ncGybpBfQyYwzzjVqR96ptqeawausJnrzn",
-            balance: solBalance != null ? solBalance.toFixed(4) : "0.0000",
-            network: "Solana",
-            color:   "from-purple-500 to-pink-500",
-            initial: "S",
-          },
-        ]}
+        wallets={wallet ? [{
+          chain:   "Solana",
+          symbol:  "SOL",
+          address: wallet.address,
+          balance: Number(wallet.balance).toFixed(4),
+          network: "Solana",
+          color:   "from-purple-500 to-pink-500",
+          initial: "S",
+        }] : []}
+      />
+
+      {/* Send modal */}
+      <SendModal
+        isOpen={showSend}
+        onClose={() => {
+          setShowSend(false);
+          // Refresh balance after sending
+          setTimeout(fetchWallet, 2000);
+        }}
+        balance={wallet?.balance ?? 0}
       />
     </div>
   );
