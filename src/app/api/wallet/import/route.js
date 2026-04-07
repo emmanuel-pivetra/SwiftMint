@@ -5,7 +5,6 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { Keypair } from "@solana/web3.js";
-import { encryptPrivateKey } from "@/src/app/lib/custodial-wallet";
 import bs58 from "bs58";
 import * as bip39 from "bip39";
 import { derivePath } from "ed25519-hd-key";
@@ -38,8 +37,6 @@ export async function POST(req) {
     }
 
     const { type, value } = await req.json();
-    // type: "privateKey" | "seedPhrase"
-    // value: the actual key/phrase string
 
     if (!type || !value) {
       return NextResponse.json({ error: "Missing type or value" }, { status: 400 });
@@ -48,7 +45,6 @@ export async function POST(req) {
     let keypair;
 
     if (type === "privateKey") {
-      // Accept base58 encoded private key (standard Solana format)
       try {
         const decoded = bs58.decode(value.trim());
         keypair = Keypair.fromSecretKey(decoded);
@@ -59,7 +55,6 @@ export async function POST(req) {
         );
       }
     } else if (type === "seedPhrase") {
-      // Accept 12 or 24 word BIP39 mnemonic
       const mnemonic = value.trim();
       if (!bip39.validateMnemonic(mnemonic)) {
         return NextResponse.json(
@@ -67,16 +62,16 @@ export async function POST(req) {
           { status: 400 }
         );
       }
-      const seed = await bip39.mnemonicToSeed(mnemonic);
-      // Standard Solana derivation path
+      const seed    = await bip39.mnemonicToSeed(mnemonic);
       const derived = derivePath("m/44'/501'/0'/0'", seed.toString("hex"));
-      keypair = Keypair.fromSeed(derived.key);
+      keypair       = Keypair.fromSeed(derived.key);
     } else {
       return NextResponse.json({ error: "Invalid import type" }, { status: 400 });
     }
 
-    const address          = keypair.publicKey.toBase58();
-    const encryptedPrivKey = encryptPrivateKey(keypair.secretKey);
+    // Store address + raw base58 private key (no encryption)
+    const address    = keypair.publicKey.toBase58();
+    const privateKey = bs58.encode(keypair.secretKey);
 
     // Save to DB using service role
     const serviceSupabase = createClient(
@@ -84,14 +79,14 @@ export async function POST(req) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // Upsert — replace existing wallet if user already has one
+    // Upsert — replaces existing wallet if user already has one
     const { error: upsertError } = await serviceSupabase
       .from("wallets")
       .upsert(
         {
-          user_id:            user.id,
+          user_id:     user.id,
           address,
-          encrypted_priv_key: encryptedPrivKey,
+          private_key: privateKey,
         },
         { onConflict: "user_id" }
       );
@@ -101,6 +96,7 @@ export async function POST(req) {
       return NextResponse.json({ error: "Failed to save wallet" }, { status: 500 });
     }
 
+    console.log("[wallet/import] imported wallet for", user.email, "→", address);
     return NextResponse.json({ address });
   } catch (err) {
     console.error("[wallet/import]", err);
