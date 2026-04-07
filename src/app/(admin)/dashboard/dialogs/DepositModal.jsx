@@ -4,62 +4,91 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import QRCode from "react-qr-code";
 
-// ── Demo data — replace with real values or pass as props ──────────────────
-const DEMO_WALLETS = [
+const STATIC_WALLETS = [
   {
-    chain:    "Ethereum",
-    symbol:   "ETH",
-    address:  "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
-    balance:  "1.4382",
-    network:  "ERC-20",
-    color:    "from-blue-500 to-indigo-500",
-    initial:  "E",
+    chain:   "Ethereum",
+    symbol:  "ETH",
+    address: "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
+    balance: "1.4382",
+    network: "ERC-20",
+    color:   "from-blue-500 to-indigo-500",
+    initial: "E",
   },
   {
-    chain:    "Solana",
-    symbol:   "SOL",
-    address:  "AXkxB9Gnd8ncGybpBfQyYwzzjVqR96ptqeawausJnrzn",
-    balance:  "12.8801",
-    network:  "Solana",
-    color:    "from-purple-500 to-pink-500",
-    initial:  "S",
+    chain:   "BNB Chain",
+    symbol:  "BNB",
+    address: "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
+    balance: "3.2100",
+    network: "BEP-20",
+    color:   "from-yellow-400 to-orange-400",
+    initial: "B",
   },
   {
-    chain:    "BNB Chain",
-    symbol:   "BNB",
-    address:  "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
-    balance:  "3.2100",
-    network:  "BEP-20",
-    color:    "from-yellow-400 to-orange-400",
-    initial:  "B",
-  },
-  {
-    chain:    "Polygon",
-    symbol:   "MATIC",
-    address:  "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
-    balance:  "540.00",
-    network:  "Polygon",
-    color:    "from-purple-400 to-indigo-400",
-    initial:  "P",
+    chain:   "Bitcoin",
+    symbol:  "BTC",
+    address: "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
+    balance: "540.00",
+    network: "Bitcoin",
+    color:   "from-purple-400 to-indigo-400",
+    initial: "B",
   },
 ];
 
-// ─────────────────────────────────────────────────────────────────────────────
-
 export default function DepositModal({
-  isOpen   = false,
-  onClose  = () => {},
-  // Pass real wallet data here once ready, otherwise uses demo
-  wallets  = DEMO_WALLETS,
+  isOpen  = false,
+  onClose = () => {},
+  wallets: externalWallets,
 }) {
   const modalRef      = useRef(null);
   const firstFocusRef = useRef(null);
 
+  const [solWallet,    setSolWallet]    = useState(null);
   const [activeTab,    setActiveTab]    = useState("Deposit");
   const [activeWallet, setActiveWallet] = useState(0);
   const [copied,       setCopied]       = useState(false);
 
-  const wallet = wallets[activeWallet];
+  // Fetch real Solana wallet address from the API
+  useEffect(() => {
+    if (!isOpen) return;
+
+    async function fetchSolWallet() {
+      try {
+        const res  = await fetch("/api/wallet/me");
+        const data = await res.json();
+        if (res.ok && data.address) {
+          setSolWallet({
+            chain:   "Solana",
+            symbol:  "SOL",
+            address: data.address,
+            balance: data.balance != null ? Number(data.balance).toFixed(4) : "0.0000",
+            network: "Solana",
+            color:   "from-purple-500 to-pink-500",
+            initial: "S",
+          });
+        }
+      } catch (err) {
+        console.error("[DepositModal] fetchSolWallet:", err);
+      }
+    }
+
+    fetchSolWallet();
+  }, [isOpen]);
+
+  // Build wallet list — real SOL first, then static others
+  const wallets = externalWallets ?? [
+    solWallet ?? {
+      chain:   "Solana",
+      symbol:  "SOL",
+      address: "Loading…",
+      balance: "—",
+      network: "Solana",
+      color:   "from-purple-500 to-pink-500",
+      initial: "S",
+    },
+    ...STATIC_WALLETS,
+  ];
+
+  const wallet = wallets[activeWallet] ?? wallets[0];
 
   // Lock body scroll
   useEffect(() => {
@@ -79,6 +108,7 @@ export default function DepositModal({
   }, [isOpen, onClose]);
 
   async function handleCopy(text) {
+    if (!text || text === "Loading…") return;
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
@@ -121,7 +151,6 @@ export default function DepositModal({
               aria-labelledby="deposit-title"
               className="w-full rounded-2xl bg-[#0f0f11] text-white shadow-2xl ring-1 ring-white/10 max-h-[90vh] overflow-auto"
             >
-
               {/* Header */}
               <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
                 <h3 id="deposit-title" className="text-base font-semibold">Exchange</h3>
@@ -183,14 +212,22 @@ export default function DepositModal({
                 <div className="flex gap-2 rounded-xl bg-yellow-500/10 border border-yellow-500/20 px-4 py-3">
                   <span className="text-yellow-400 text-base leading-none mt-0.5">⚠</span>
                   <p className="text-xs text-yellow-200/80 leading-relaxed">
-                    Only send <strong>{wallet.symbol}</strong> via the <strong>{wallet.network}</strong> network to this address. Sending other assets may result in permanent loss.
+                    Only send <strong>{wallet.symbol}</strong> via the{" "}
+                    <strong>{wallet.network}</strong> network to this address.
+                    Sending other assets may result in permanent loss.
                   </p>
                 </div>
 
                 {/* QR + address */}
                 <div className="flex flex-col items-center gap-4">
                   <div className="rounded-xl bg-white p-3">
-                    <QRCode value={wallet.address} size={148} />
+                    {wallet.address && wallet.address !== "Loading…" ? (
+                      <QRCode value={wallet.address} size={148} />
+                    ) : (
+                      <div className="w-[148px] h-[148px] flex items-center justify-center">
+                        <span className="w-6 h-6 rounded-full border-2 border-gray-300 border-t-gray-800 animate-spin" />
+                      </div>
+                    )}
                   </div>
 
                   <div className="w-full rounded-xl border border-white/10 bg-[#0b0b0c] p-4">
@@ -201,10 +238,11 @@ export default function DepositModal({
                     <button
                       ref={firstFocusRef}
                       onClick={() => handleCopy(wallet.address)}
+                      disabled={!wallet.address || wallet.address === "Loading…"}
                       className={`mt-3 w-full rounded-lg px-4 py-2 text-xs font-semibold transition-all ${
                         copied
                           ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                          : "bg-white/10 hover:bg-white/15 text-white"
+                          : "bg-white/10 hover:bg-white/15 text-white disabled:opacity-40 disabled:cursor-not-allowed"
                       }`}
                     >
                       {copied ? "✓ Copied!" : "Copy Address"}

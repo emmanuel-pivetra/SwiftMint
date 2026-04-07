@@ -10,15 +10,33 @@ export default function Dashboard() {
   const [loading,     setLoading]     = useState(true);
   const [showDeposit, setShowDeposit] = useState(false);
   const [showSend,    setShowSend]    = useState(false);
+  const [error, setError] = useState(false);
 
   async function fetchWallet() {
     try {
-      const res = await fetch("/api/wallet/me");
-      if (!res.ok) throw new Error("Failed");
+      const res  = await fetch("/api/wallet/me");
       const data = await res.json();
+
+      // No wallet yet — auto-create one
+      if (res.status === 404) {
+        const createRes = await fetch("/api/wallet/create", { method: "POST" });
+        if (createRes.ok) {
+          return fetchWallet(); // retry after creation
+        }
+        const createData = await createRes.json();
+        console.error("[Dashboard] create failed:", createData);
+        setError("fetch_failed");
+        return;
+      }
+
+      if (res.status === 401) { setError("unauthenticated"); return; }
+      if (!res.ok)             { setError("fetch_failed");    return; }
+
       setWallet(data);
+      setError(null);
     } catch (err) {
       console.error("[Dashboard] fetchWallet:", err);
+      setError("fetch_failed");
     } finally {
       setLoading(false);
     }

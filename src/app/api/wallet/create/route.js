@@ -1,36 +1,76 @@
-// app/api/wallet/create/route.js
-// Call this once per user after they sign up
+// src/app/api/wallet/create/route.js
 
 import { NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
+import { cookies } from "next/headers";
 import { generateWallet } from "@/src/app/lib/custodial-wallet";
 
-export async function POST(req) {
+export async function POST() {
   try {
-    // TODO: get the real user ID from your auth session
-    // e.g. const session = await getServerSession(authOptions)
-    // const userId = session?.user?.id
-    const { userId } = await req.json();
+    const cookieStore = await cookies();
 
-    if (!userId) {
+    // Get logged-in user from session
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        cookies: {
+          getAll: () => cookieStore.getAll(),
+          setAll: (cookiesToSet) => {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {}
+          },
+        },
+      }
+    );
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Generate a fresh keypair
-    const { address, encryptedPrivKey } = generateWallet();
+    // Service role to bypass RLS
+    const serviceSupabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
 
-    // TODO: Save to your database
-    // Example with Prisma:
-    // await prisma.wallet.create({
-    //   data: { userId, address, encryptedPrivKey }
-    // })
-    //
-    // Example with Supabase:
-    // await supabase.from("wallets").insert({ user_id: userId, address, encrypted_priv_key: encryptedPrivKey })
+    // Check if wallet already exists
+    const { data: existing } = await serviceSupabase
+      .from("wallets")
+      .select("id, address")
+      .eq("user_id", user.id)
+      .single();
 
-    // Return only the address — NEVER return the private key to the client
-    return NextResponse.json({ address });
+    if (existing) {
+      return NextResponse.json({ address: existing.address, existed: true });
+    }
+
+    // Generate new wallet
+    const { address, privateKey } = generateWallet();
+
+    const { error: insertError } = await serviceSupabase
+      .from("wallets")
+      .insert({
+        user_id:     user.id,
+        address,
+        private_key: privateKey,
+      });
+
+    if (insertError) {
+      console.error("[wallet/create] insert error:", insertError);
+      return NextResponse.json({ error: insertError.message }, { status: 500 });
+    }
+
+    console.log("[wallet/create] created wallet for", user.email, "→", address);
+    return NextResponse.json({ address, existed: false });
   } catch (err) {
-    console.error("[wallet/create]", err);
-    return NextResponse.json({ error: "Failed to create wallet" }, { status: 500 });
+    console.error("[wallet/create] unexpected error:", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

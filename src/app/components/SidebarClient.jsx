@@ -148,7 +148,7 @@ export default function SidebarClient({ onOpenDeposit }) {
               </div>
 
               <button
-              className="mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-green-500/20 hover:bg-red-500/10 transition-colors text-green-400 hover:text-green-300 text-xs"
+              className="mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-green-500/20 hover:bg-green-500/10 transition-colors text-green-400 hover:text-green-300 text-xs"
                onClick={() => setShowImport(true)}>
                 Import
               </button>

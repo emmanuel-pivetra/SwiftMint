@@ -56,7 +56,7 @@ export async function POST(req) {
 
     // Sign and broadcast the transaction
     const result = await sendSOL({
-      encryptedPrivKey: wallet.encrypted_priv_key,
+      privateKey: wallet.private_key,
       toAddress,
       amountSOL: Number(amountSOL),
     });

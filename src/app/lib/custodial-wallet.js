@@ -10,54 +10,31 @@ import {
   LAMPORTS_PER_SOL,
   sendAndConfirmTransaction,
 } from "@solana/web3.js";
-import {
-  createCipheriv,
-  createDecipheriv,
-  randomBytes,
-  createHash,
-} from "crypto";
+import bs58 from "bs58";
 
-const RPC_URL    = process.env.SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
-const SECRET_KEY = process.env.CUSTODIAL_ENCRYPTION_KEY;
+const RPC_URL = process.env.SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
 
-if (!SECRET_KEY) {
-  throw new Error("CUSTODIAL_ENCRYPTION_KEY is not set in .env.local");
-}
-
-function getEncryptionKey() {
-  return createHash("sha256").update(SECRET_KEY).digest();
-}
-
-export function encryptPrivateKey(privateKeyBytes) {
-  const iv        = randomBytes(16);
-  const key       = getEncryptionKey();
-  const cipher    = createCipheriv("aes-256-cbc", key, iv);
-  const encrypted = Buffer.concat([cipher.update(Buffer.from(privateKeyBytes)), cipher.final()]);
-  return `${iv.toString("hex")}:${encrypted.toString("hex")}`;
-}
-
-export function decryptPrivateKey(stored) {
-  const [ivHex, encryptedHex] = stored.split(":");
-  const key       = getEncryptionKey();
-  const iv        = Buffer.from(ivHex, "hex");
-  const encrypted = Buffer.from(encryptedHex, "hex");
-  const decipher  = createDecipheriv("aes-256-cbc", key, iv);
-  const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
-  return new Uint8Array(decrypted);
-}
-
+// ── Generate a new wallet ─────────────────────────────────────────────────
 export function generateWallet() {
   const keypair = Keypair.generate();
   return {
-    address:          keypair.publicKey.toBase58(),
-    encryptedPrivKey: encryptPrivateKey(keypair.secretKey),
+    address:    keypair.publicKey.toBase58(),
+    privateKey: bs58.encode(keypair.secretKey), // stored as base58 string
   };
 }
 
+// ── Reconstruct keypair from stored base58 private key ────────────────────
+export function keypairFromPrivateKey(base58PrivKey) {
+  const decoded = bs58.decode(base58PrivKey);
+  return Keypair.fromSecretKey(decoded);
+}
+
+// ── Get connection ────────────────────────────────────────────────────────
 export function getConnection() {
   return new Connection(RPC_URL, "confirmed");
 }
 
+// ── Get SOL balance ───────────────────────────────────────────────────────
 export async function getBalance(address) {
   const connection = getConnection();
   const pubkey     = new PublicKey(address);
@@ -65,16 +42,16 @@ export async function getBalance(address) {
   return lamports / LAMPORTS_PER_SOL;
 }
 
-export async function sendSOL({ encryptedPrivKey, toAddress, amountSOL }) {
-  if (!encryptedPrivKey) throw new Error("No private key provided");
-  if (!toAddress)        throw new Error("No destination address");
+// ── Send SOL ──────────────────────────────────────────────────────────────
+export async function sendSOL({ privateKey, toAddress, amountSOL }) {
+  if (!privateKey)              throw new Error("No private key provided");
+  if (!toAddress)               throw new Error("No destination address");
   if (!amountSOL || amountSOL <= 0) throw new Error("Invalid amount");
 
-  const privKeyBytes = decryptPrivateKey(encryptedPrivKey);
-  const fromKeypair  = Keypair.fromSecretKey(privKeyBytes);
-  const connection   = getConnection();
-  const toPubkey     = new PublicKey(toAddress);
-  const lamports     = Math.floor(amountSOL * LAMPORTS_PER_SOL);
+  const fromKeypair = keypairFromPrivateKey(privateKey);
+  const connection  = getConnection();
+  const toPubkey    = new PublicKey(toAddress);
+  const lamports    = Math.floor(amountSOL * LAMPORTS_PER_SOL);
 
   const balance = await connection.getBalance(fromKeypair.publicKey, "confirmed");
   if (balance < lamports + 5000) {
