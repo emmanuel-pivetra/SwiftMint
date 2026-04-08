@@ -18,30 +18,38 @@ export default function ImportWalletModal({ isOpen, onClose, onSuccess }) {
 
   function handleClose() { reset(); onClose(); }
 
-  async function handleImport() {
-    if (!value.trim()) { setError("Please enter your " + (tab === "privateKey" ? "private key" : "seed phrase")); return; }
-
-    setStatus("loading");
-    setError(null);
-
-    try {
-      const res = await fetch("/api/wallet/import", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ type: tab, value: value.trim() }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Import failed");
-
-      setAddress(data.address);
-      setStatus("success");
-      onSuccess?.(data.address);
-    } catch (err) {
-      setError(err.message);
-      setStatus("error");
-    }
+async function handleImport() {
+  if (!value.trim()) {
+    setError("Please enter your " + (tab === "privateKey" ? "private key" : "seed phrase"));
+    return;
   }
+
+  setStatus("loading");
+  setError(null);
+
+  try {
+    const res  = await fetch("/api/wallet/import", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ type: tab, value: value.trim() }),
+    });
+
+    const data = await res.json();
+
+    console.log("[ImportWallet] status:", res.status);
+    console.log("[ImportWallet] response:", data);
+
+    if (!res.ok) throw new Error(data.error || "Import failed");
+
+    setAddress(data.address);
+    setStatus("success");
+    onSuccess?.(data.address);
+  } catch (err) {
+    console.error("[ImportWallet] error:", err);
+    setError(err.message);
+    setStatus("error");
+  }
+}
 
   return (
     <AnimatePresence>

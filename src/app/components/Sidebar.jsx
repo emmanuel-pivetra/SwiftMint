@@ -1,7 +1,7 @@
 import React, { Suspense } from "react";
 import SidebarClient from "./SidebarClient";
 
-export default function Sidebar() {
+export default function Sidebar(props) {
   // header height = 64px -> top-[64px], height = calc(100vh-64px)
   return (
     <aside className="w-full flex flex-col justify-start
@@ -9,7 +9,7 @@ export default function Sidebar() {
 
       <div className="h-full">
         <Suspense fallback={<div className="text-sm text-muted-foreground">Loading menu…</div>}>
-          <SidebarClient />
+          <SidebarClient {...props} />
         </Suspense>
       </div>
     </aside>

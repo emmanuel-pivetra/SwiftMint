@@ -80,8 +80,6 @@ export default function DashboardClient() {
           return;
         }
         const json = await res.json();
-
-        console.log("json:",json);
         
         const arr  = Array.isArray(json) ? json : [];
 

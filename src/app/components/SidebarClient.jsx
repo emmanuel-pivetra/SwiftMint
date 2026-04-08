@@ -1,11 +1,41 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { NavItem } from "./nav/NavItem";
 import { navConfig } from "./nav/navConfig";
 import { useUser } from "./hooks/useUser";
 import ImportWalletModal from "../(admin)/dashboard/dialogs/ImportWalletModal";
+
+const DEMO_NETWORKS = [
+  {
+    chain:   "Ethereum",
+    symbol:  "ETH",
+    address: "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
+    balance: "1.4382",
+    network: "ERC-20",
+    color:   "from-blue-500 to-indigo-500",
+    icon:    "⟠",
+  },
+  {
+    chain:   "BNB Chain",
+    symbol:  "BNB",
+    address: "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
+    balance: "3.2100",
+    network: "BEP-20",
+    color:   "from-yellow-400 to-orange-400",
+    icon:    "◈",
+  },
+  {
+    chain:   "Bitcoin",
+    symbol:  "BTC",
+    address: "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
+    balance: "0.0041",
+    network: "Bitcoin",
+    color:   "from-orange-400 to-yellow-500",
+    icon:    "₿",
+  },
+];
 
 function FundAccountModal({ onClose, onDeposit }) {
   return (
@@ -56,7 +86,73 @@ function WalletSkeleton() {
   );
 }
 
-export default function SidebarClient({ onOpenDeposit }) {
+function NetworkSwitcher({ networks, activeIndex, onChange }) {
+  const [open, setOpen] = useState(false);
+  const active = networks[activeIndex];
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = () => setOpen(false);
+    window.addEventListener("click", handler);
+    return () => window.removeEventListener("click", handler);
+  }, [open]);
+
+
+  return (
+    <div className="relative mt-3" onClick={(e) => e.stopPropagation()}>
+      <div className="text-xs text-gray-500 mb-1">Network</div>
+
+      <button
+        onClick={() => setOpen((s) => !s)}
+        className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 border border-white/10 transition-colors text-sm text-white"
+      >
+        <span className="flex items-center gap-2">
+          <span className={`w-5 h-5 rounded-md bg-gradient-to-br ${active.color} flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0`}>
+            {active.icon}
+          </span>
+          <span className="text-sm">{active.chain}</span>
+        </span>
+        <svg
+          width="14" height="14" viewBox="0 0 24 24" fill="none"
+          className={`text-gray-400 transition-transform flex-shrink-0 ${open ? "rotate-180" : ""}`}
+        >
+          <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute top-full left-0 right-0 mt-1 z-30 bg-gray-800 border border-white/10 rounded-lg overflow-hidden shadow-xl">
+          {networks.map((n, i) => {
+            const isActive = i === activeIndex;
+            return (
+              <button
+                key={n.chain}
+                onClick={() => { onChange(i); setOpen(false); }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-sm transition-colors ${
+                  isActive
+                    ? "bg-white/5 text-white cursor-default"
+                    : "text-gray-300 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                <span className={`w-5 h-5 rounded-md bg-gradient-to-br ${n.color} flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0`}>
+                  {n.icon}
+                </span>
+                <span className="flex-1 text-left">{n.chain}</span>
+                <span className="text-[10px] text-gray-500">{n.symbol}</span>
+                {isActive && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 flex-shrink-0" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// activeNetIndex and onNetworkChange come from DashboardPage (shared state)
+export default function SidebarClient({ onOpenDeposit, activeNetIndex = 0, onNetworkChange }) {
   const pathname = usePathname();
   const router   = useRouter();
   const isActive = (href) => pathname === href || pathname.startsWith(`${href}/`);
@@ -66,30 +162,49 @@ export default function SidebarClient({ onOpenDeposit }) {
   const [wallet,        setWallet]        = useState(null);
   const [walletLoading, setWalletLoading] = useState(true);
   const [showFundModal, setShowFundModal] = useState(false);
+  const [showImport,    setShowImport]    = useState(false);
 
-  const [showImport, setShowImport] = useState(false);
+  // Build full network list with real SOL data merged in
+  const solNetwork = {
+    chain:   "Solana",
+    symbol:  "SOL",
+    address: wallet?.address ?? "Loading…",
+    balance: wallet?.balance != null ? Number(wallet.balance).toFixed(4) : "—",
+    network: "Solana",
+    color:   "from-purple-500 to-pink-500",
+    icon:    "◎",
+  };
 
-  // Fetch custodial wallet for the logged-in user
-  useEffect(() => {
+  const allNetworks = [solNetwork, ...DEMO_NETWORKS];
+  const activeNet   = allNetworks[activeNetIndex] ?? allNetworks[0];
+
+  const shortAddress = activeNet?.address && activeNet.address !== "Loading…"
+    ? `${activeNet.address.slice(0, 6)}…${activeNet.address.slice(-4)}`
+    : activeNet?.address ?? "—";
+
+  const displayBalance = activeNet?.balance != null
+    ? `${activeNet.balance} ${activeNet.symbol}`
+    : "—";
+
+  const fetchWallet = useCallback(async () => {
     if (!user) { setWallet(null); setWalletLoading(false); return; }
-
-    async function fetchWallet() {
-      try {
-        const res = await fetch("/api/wallet/me");
-        if (!res.ok) throw new Error("Failed");
-        const data = await res.json();
-        setWallet(data);
-      } catch {
-        setWallet(null);
-      } finally {
-        setWalletLoading(false);
-      }
+    try {
+      const res = await fetch("/api/wallet/me");
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      setWallet(data);
+    } catch {
+      setWallet(null);
+    } finally {
+      setWalletLoading(false);
     }
+  }, [user]);
 
+  useEffect(() => {
     fetchWallet();
     const interval = setInterval(fetchWallet, 15_000);
     return () => clearInterval(interval);
-  }, [user]);
+  }, [fetchWallet]);
 
   function handleNavClick(e) {
     e.preventDefault();
@@ -101,13 +216,7 @@ export default function SidebarClient({ onOpenDeposit }) {
     router.push("/");
   }
 
-  const shortAddress = wallet?.address
-    ? `${wallet.address.slice(0, 6)}…${wallet.address.slice(-4)}`
-    : null;
 
-  const displayBalance = wallet?.balance != null
-    ? `${Number(wallet.balance).toFixed(4)} SOL`
-    : "0.0000 SOL";
 
   return (
     <>
@@ -118,14 +227,20 @@ export default function SidebarClient({ onOpenDeposit }) {
         />
       )}
 
-      <nav className="flex flex-col mx-auto gap-3 w-full">
+      <ImportWalletModal
+        isOpen={showImport}
+        onClose={() => setShowImport(false)}
+        onSuccess={() => {
+          setShowImport(false);
+          fetchWallet();
+        }}
+      />
 
-        {/* ── Wallet / Auth summary ── */}
+      <nav className="flex flex-col mx-auto gap-3 w-full">
         <div className="mb-4 rounded-md text-sm">
           {userLoading || walletLoading ? (
             <WalletSkeleton />
           ) : user && wallet ? (
-            // Logged in + wallet exists
             <>
               {/* User info */}
               <div className="flex items-center gap-2 mb-3">
@@ -137,30 +252,32 @@ export default function SidebarClient({ onOpenDeposit }) {
                 </div>
               </div>
 
-              {/* Wallet address */}
-              <div className="text-xs text-gray-500">Wallet</div>
-              <div className="mt-1 font-mono text-sm text-white">{shortAddress}</div>
+              {/* Network switcher — calls onNetworkChange to update parent */}
+              <NetworkSwitcher
+                networks={allNetworks}
+                activeIndex={activeNetIndex}
+                onChange={(i) => onNetworkChange?.(i)}
+              />
+
+              {/* Address */}
+              <div className="mt-3">
+                <div className="text-xs text-gray-500">Wallet Address</div>
+                <div className="mt-1 font-mono text-sm text-white">{shortAddress}</div>
+              </div>
 
               {/* Balance */}
               <div className="mt-3">
-                <div className="text-xs text-gray-500">SOL Balance</div>
+                <div className="text-xs text-gray-500">{activeNet.symbol} Balance</div>
                 <div className="text-lg font-semibold text-white">{displayBalance}</div>
               </div>
 
+              {/* Import */}
               <button
-              className="mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-green-500/20 hover:bg-green-500/10 transition-colors text-green-400 hover:text-green-300 text-xs"
-               onClick={() => setShowImport(true)}>
-                Import
+                onClick={() => setShowImport(true)}
+                className="mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-green-500/20 hover:bg-green-500/10 transition-colors text-green-400 hover:text-green-300 text-xs"
+              >
+                Import Wallet
               </button>
-
-              <ImportWalletModal
-                isOpen={showImport}
-                onClose={() => setShowImport(false)}
-                onSuccess={(address) => {
-                  setShowImport(false);
-                  fetchWallet(); // refresh balance
-                }}
-              />
 
               {/* Sign out */}
               <button
@@ -173,10 +290,8 @@ export default function SidebarClient({ onOpenDeposit }) {
                 </svg>
                 Sign out
               </button>
-              
             </>
           ) : (
-            // Not logged in
             <div className="flex flex-col gap-2">
               <p className="text-xs text-gray-500 mb-1">Sign in to access your wallet</p>
               <button
@@ -195,7 +310,7 @@ export default function SidebarClient({ onOpenDeposit }) {
           )}
         </div>
 
-        {/* ── Nav items ── */}
+        {/* Nav items */}
         <div className="flex flex-col gap-3 h-full">
           {navConfig.map((item) => (
             <div key={item.href} onClick={handleNavClick} className="cursor-pointer">
@@ -208,7 +323,6 @@ export default function SidebarClient({ onOpenDeposit }) {
             </div>
           ))}
         </div>
-
       </nav>
     </>
   );
