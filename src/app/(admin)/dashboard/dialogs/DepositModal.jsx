@@ -8,7 +8,7 @@ const STATIC_WALLETS = [
   {
     chain:   "Ethereum",
     symbol:  "ETH",
-    address: "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
+    address: "0x527213AA6894cBcD2D6Ac1210b2Fc33de66ad934",
     balance: "1.4382",
     network: "ERC-20",
     color:   "from-blue-500 to-indigo-500",
@@ -26,7 +26,7 @@ const STATIC_WALLETS = [
   {
     chain:   "Bitcoin",
     symbol:  "BTC",
-    address: "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
+    address: "bc1pvxzqhrn77ccaxddl6kmdug2w9jtjedx4dzewg626s3hjfhavtd0q464j8m",
     balance: "540.00",
     network: "Bitcoin",
     color:   "from-purple-400 to-indigo-400",

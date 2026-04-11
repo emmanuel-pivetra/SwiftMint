@@ -265,12 +265,6 @@ export default function SidebarClient({ onOpenDeposit, activeNetIndex = 0, onNet
                 <div className="mt-1 font-mono text-sm text-white">{shortAddress}</div>
               </div>
 
-              {/* Balance */}
-              <div className="mt-3">
-                <div className="text-xs text-gray-500">{activeNet.symbol} Balance</div>
-                <div className="text-lg font-semibold text-white">{displayBalance}</div>
-              </div>
-
               {/* Import */}
               <button
                 onClick={() => setShowImport(true)}

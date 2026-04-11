@@ -3,13 +3,40 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
+// Sanitize and normalize whatever the user pastes
+function normalizePrivateKey(raw) {
+  const trimmed = raw.trim();
+
+  // Handle JSON array format: [1,2,3,...,64]  (some wallet exports)
+  if (trimmed.startsWith("[")) {
+    try {
+      const arr = JSON.parse(trimmed);
+      if (!Array.isArray(arr)) throw new Error("Not an array");
+
+      // Convert byte array to base58 using browser-compatible method
+      // We'll send it as a special marker so the server handles it
+      return { format: "bytes", value: JSON.stringify(arr) };
+    } catch {
+      // Not valid JSON array — fall through to base58 check
+    }
+  }
+
+  // Handle hex string (64 or 128 chars)
+  if (/^[0-9a-fA-F]+$/.test(trimmed) && (trimmed.length === 64 || trimmed.length === 128)) {
+    return { format: "hex", value: trimmed };
+  }
+
+  // Default — treat as base58
+  return { format: "base58", value: trimmed };
+}
+
 export default function ImportWalletModal({ isOpen, onClose, onSuccess }) {
-  const [tab,     setTab]     = useState("privateKey"); // "privateKey" | "seedPhrase"
+  const [tab,     setTab]     = useState("privateKey");
   const [value,   setValue]   = useState("");
-  const [status,  setStatus]  = useState("idle"); // idle | loading | success | error
+  const [status,  setStatus]  = useState("idle");
   const [error,   setError]   = useState(null);
   const [address, setAddress] = useState(null);
-  const [show,    setShow]    = useState(false); // show/hide sensitive input
+  const [show,    setShow]    = useState(false);
 
   function reset() {
     setValue(""); setStatus("idle"); setError(null);
@@ -18,38 +45,45 @@ export default function ImportWalletModal({ isOpen, onClose, onSuccess }) {
 
   function handleClose() { reset(); onClose(); }
 
-async function handleImport() {
-  if (!value.trim()) {
-    setError("Please enter your " + (tab === "privateKey" ? "private key" : "seed phrase"));
-    return;
+  async function handleImport() {
+    if (!value.trim()) {
+      setError("Please enter your " + (tab === "privateKey" ? "private key" : "seed phrase"));
+      return;
+    }
+
+    setStatus("loading");
+    setError(null);
+
+    try {
+      // Normalize the private key format before sending
+      const payload = tab === "privateKey"
+        ? (() => {
+            const normalized = normalizePrivateKey(value);
+            return { type: normalized.format === "base58" ? "privateKey" : `privateKey_${normalized.format}`, value: normalized.value };
+          })()
+        : { type: "seedPhrase", value: value.trim() };
+
+      const res  = await fetch("/api/wallet/import", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      console.log("[ImportWallet] status:", res.status, data);
+
+      if (!res.ok) throw new Error(data.error || "Import failed");
+
+      setAddress(data.address);
+      setStatus("success");
+      onSuccess?.(data.address);
+    } catch (err) {
+      console.error("[ImportWallet] error:", err);
+      setError(err.message);
+      setStatus("error");
+    }
   }
-
-  setStatus("loading");
-  setError(null);
-
-  try {
-    const res  = await fetch("/api/wallet/import", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ type: tab, value: value.trim() }),
-    });
-
-    const data = await res.json();
-
-    console.log("[ImportWallet] status:", res.status);
-    console.log("[ImportWallet] response:", data);
-
-    if (!res.ok) throw new Error(data.error || "Import failed");
-
-    setAddress(data.address);
-    setStatus("success");
-    onSuccess?.(data.address);
-  } catch (err) {
-    console.error("[ImportWallet] error:", err);
-    setError(err.message);
-    setStatus("error");
-  }
-}
 
   return (
     <AnimatePresence>
@@ -86,7 +120,6 @@ async function handleImport() {
               <div className="px-5 py-5 flex flex-col gap-4">
 
                 {status === "success" ? (
-                  /* Success */
                   <div className="flex flex-col items-center gap-4 py-6 text-center">
                     <div className="w-14 h-14 rounded-full bg-green-500/15 border border-green-500/30 flex items-center justify-center text-2xl">✓</div>
                     <div>
@@ -96,7 +129,7 @@ async function handleImport() {
                       </p>
                     </div>
                     <p className="text-xs text-gray-500 max-w-xs leading-relaxed">
-                      Your wallet has been securely imported and encrypted. Your previous wallet has been replaced.
+                      Your wallet has been imported. Your previous wallet has been replaced.
                     </p>
                     <button onClick={handleClose} className="w-full mt-2 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm font-medium transition-colors">
                       Done
@@ -104,19 +137,19 @@ async function handleImport() {
                   </div>
                 ) : (
                   <>
-                    {/* Warning banner */}
+                    {/* Warning */}
                     <div className="flex gap-2.5 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3">
                       <span className="text-red-400 text-sm mt-0.5 flex-shrink-0">⚠</span>
                       <p className="text-xs text-red-300/80 leading-relaxed">
-                        Never share your private key or seed phrase with anyone. SwiftMint staff will never ask for these. Only import on a trusted device.
+                        Never share your private key or seed phrase with anyone. SwiftMint staff will never ask for these.
                       </p>
                     </div>
 
                     {/* Tab switcher */}
                     <div className="flex rounded-xl bg-white/5 p-1 gap-1">
                       {[
-                        { id: "privateKey",  label: "Private Key" },
-                        { id: "seedPhrase",  label: "Seed Phrase" },
+                        { id: "privateKey", label: "Private Key" },
+                        { id: "seedPhrase", label: "Seed Phrase" },
                       ].map((t) => (
                         <button
                           key={t.id}
@@ -133,15 +166,13 @@ async function handleImport() {
                     {/* Input */}
                     {tab === "privateKey" ? (
                       <div>
-                        <label className="text-xs text-gray-400 mb-1.5 block">
-                          Base58 private key
-                        </label>
+                        <label className="text-xs text-gray-400 mb-1.5 block">Private key</label>
                         <div className="relative">
                           <input
                             type={show ? "text" : "password"}
                             value={value}
                             onChange={(e) => setValue(e.target.value)}
-                            placeholder="5KJvsngHeMpm..."
+                            placeholder="Base58, hex, or byte array [1,2,3...]"
                             className="w-full rounded-xl bg-[#0b0b0c] border border-white/10 px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 font-mono pr-12"
                           />
                           <button
@@ -152,19 +183,19 @@ async function handleImport() {
                             {show ? "Hide" : "Show"}
                           </button>
                         </div>
-                        <p className="text-xs text-gray-600 mt-1.5">
-                          Export from Phantom: Settings → Security → Export Private Key
-                        </p>
+                        {/* Format guide */}
+                        <div className="mt-2 rounded-lg bg-white/5 px-3 py-2 text-[11px] text-gray-500 space-y-1">
+                          <div><span className="text-gray-400">Phantom:</span> Settings → Security → Export Private Key</div>
+                          <div><span className="text-gray-400">Accepts:</span> Base58 string, hex string, or byte array</div>
+                        </div>
                       </div>
                     ) : (
                       <div>
-                        <label className="text-xs text-gray-400 mb-1.5 block">
-                          12 or 24 word seed phrase
-                        </label>
+                        <label className="text-xs text-gray-400 mb-1.5 block">12 or 24 word seed phrase</label>
                         <textarea
                           value={value}
                           onChange={(e) => setValue(e.target.value)}
-                          placeholder="word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12"
+                          placeholder="word1 word2 word3 ... word12"
                           rows={3}
                           className="w-full rounded-xl bg-[#0b0b0c] border border-white/10 px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 font-mono resize-none"
                         />
@@ -176,7 +207,7 @@ async function handleImport() {
 
                     {/* Error */}
                     {error && (
-                      <div className="rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400">
+                      <div className="rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400 break-words">
                         {error}
                       </div>
                     )}

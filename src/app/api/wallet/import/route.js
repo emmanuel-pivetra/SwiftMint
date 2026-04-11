@@ -9,11 +9,42 @@ import bs58 from "bs58";
 import * as bip39 from "bip39";
 import { derivePath } from "ed25519-hd-key";
 
+const encode = bs58.encode ?? bs58.default?.encode;
+const decode = bs58.decode ?? bs58.default?.decode;
+
+function keypairFromPrivateKey(type, value) {
+  let decoded;
+
+  if (type === "privateKey") {
+    // base58 string
+    decoded = decode(value.trim());
+
+  } else if (type === "privateKey_bytes") {
+    // JSON byte array e.g. [1,2,3,...,64]
+    const arr = JSON.parse(value);
+    decoded   = Uint8Array.from(arr);
+
+  } else if (type === "privateKey_hex") {
+    // Hex string
+    const hex = value.trim().replace(/^0x/, "");
+    decoded   = new Uint8Array(hex.match(/.{1,2}/g).map((b) => parseInt(b, 16)));
+
+  } else {
+    throw new Error("Unknown key type");
+  }
+
+  console.log("[wallet/import] decoded key length:", decoded.length);
+
+  if (decoded.length === 64) return Keypair.fromSecretKey(decoded);
+  if (decoded.length === 32) return Keypair.fromSeed(decoded);
+
+  throw new Error(`Invalid key length: ${decoded.length} bytes. Expected 32 or 64.`);
+}
+
 export async function POST(req) {
   try {
     const cookieStore = await cookies();
 
-    // Get authenticated user
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -44,16 +75,14 @@ export async function POST(req) {
 
     let keypair;
 
-    if (type === "privateKey") {
+    if (type.startsWith("privateKey")) {
       try {
-        const decoded = bs58.decode(value.trim());
-        keypair = Keypair.fromSecretKey(decoded);
-      } catch {
-        return NextResponse.json(
-          { error: "Invalid private key. Make sure it is base58 encoded." },
-          { status: 400 }
-        );
+        keypair = keypairFromPrivateKey(type, value);
+      } catch (e) {
+        console.error("[wallet/import] key error:", e.message);
+        return NextResponse.json({ error: e.message }, { status: 400 });
       }
+
     } else if (type === "seedPhrase") {
       const mnemonic = value.trim();
       if (!bip39.validateMnemonic(mnemonic)) {
@@ -62,44 +91,43 @@ export async function POST(req) {
           { status: 400 }
         );
       }
-      const seed    = await bip39.mnemonicToSeed(mnemonic);
-      const derived = derivePath("m/44'/501'/0'/0'", seed.toString("hex"));
-      keypair       = Keypair.fromSeed(derived.key);
+      try {
+        const seed    = await bip39.mnemonicToSeed(mnemonic);
+        const derived = derivePath("m/44'/501'/0'/0'", seed.toString("hex"));
+        keypair       = Keypair.fromSeed(derived.key);
+      } catch (e) {
+        return NextResponse.json({ error: `Seed phrase error: ${e.message}` }, { status: 400 });
+      }
+
     } else {
       return NextResponse.json({ error: "Invalid import type" }, { status: 400 });
     }
 
-    // Store address + raw base58 private key (no encryption)
     const address    = keypair.publicKey.toBase58();
-    const privateKey = bs58.encode(keypair.secretKey);
+    const privateKey = encode(keypair.secretKey);
 
-    // Save to DB using service role
     const serviceSupabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // Upsert — replaces existing wallet if user already has one
     const { error: upsertError } = await serviceSupabase
       .from("wallets")
       .upsert(
-        {
-          user_id:     user.id,
-          address,
-          private_key: privateKey,
-        },
+        { user_id: user.id, address, private_key: privateKey },
         { onConflict: "user_id" }
       );
 
     if (upsertError) {
-      console.error("[wallet/import] upsert error:", upsertError);
-      return NextResponse.json({ error: "Failed to save wallet" }, { status: 500 });
+      console.error("[wallet/import] upsert error:", JSON.stringify(upsertError));
+      return NextResponse.json({ error: upsertError.message }, { status: 500 });
     }
 
-    console.log("[wallet/import] imported wallet for", user.email, "→", address);
+    console.log("[wallet/import] imported for", user.email, "→", address);
     return NextResponse.json({ address });
+
   } catch (err) {
-    console.error("[wallet/import]", err);
-    return NextResponse.json({ error: "Import failed" }, { status: 500 });
+    console.error("[wallet/import] unexpected:", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
