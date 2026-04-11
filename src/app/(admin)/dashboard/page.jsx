@@ -8,7 +8,15 @@ import { AnimatePresence, motion } from "framer-motion";
 
 export default function DashboardPage() {
   const [sidebarOpen,    setSidebarOpen]    = useState(false);
-  const [activeNetIndex, setActiveNetIndex] = useState(0); // 0 = Solana
+  const [activeNetIndex, setActiveNetIndex] = useState(() => {
+  if (typeof window === "undefined") return 0;
+    return parseInt(localStorage.getItem("activeNetIndex") ?? "0", 10) || 0;
+  });
+
+  function handleNetworkChange(i) {
+    setActiveNetIndex(i);
+    localStorage.setItem("activeNetIndex", String(i));
+  }
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
@@ -22,9 +30,10 @@ export default function DashboardPage() {
         {/* Desktop sidebar */}
         <aside className="hidden md:flex w-64 flex-shrink-0 border-r border-white/10 bg-gray-900 flex-col">
           <div className="flex-1 overflow-y-auto p-4">
+   
             <Sidebar
               activeNetIndex={activeNetIndex}
-              onNetworkChange={setActiveNetIndex}
+              onNetworkChange={handleNetworkChange}   // ← was setActiveNetIndex
             />
           </div>
         </aside>
@@ -63,10 +72,9 @@ export default function DashboardPage() {
                   <Sidebar
                     activeNetIndex={activeNetIndex}
                     onNetworkChange={(i) => {
-                      setActiveNetIndex(i);
+                      handleNetworkChange(i);               // ← was setActiveNetIndex(i)
                       setSidebarOpen(false);
                     }}
-                    onNavigate={() => setSidebarOpen(false)}
                   />
                 </div>
               </motion.aside>

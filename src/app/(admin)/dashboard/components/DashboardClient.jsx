@@ -137,7 +137,6 @@ export default function DashboardClient({ solBalance = 0 }) {
 
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
           <h2 className="text-sm font-semibold text-white">Trending Tokens</h2>
-          <span className="text-xs text-gray-500">Click any row to trade · Refreshes every 15s</span>
         </div>
 
         <div className="overflow-x-auto">
