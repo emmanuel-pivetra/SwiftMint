@@ -18,8 +18,8 @@ const DEMO_NETWORKS = [
   {
     chain:   "Ethereum",
     symbol:  "ETH",
-    address: "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
-    balance: "1.4382",
+    address: "0x527213AA6894cBcD2D6Ac1210b2Fc33de66ad934",
+    balance: "0.0000",
     network: "ERC-20",
     color:   "from-blue-500 to-indigo-500",
     icon:    "⟠",
@@ -27,8 +27,8 @@ const DEMO_NETWORKS = [
   {
     chain:   "BNB Chain",
     symbol:  "BNB",
-    address: "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
-    balance: "3.2100",
+    address: "0xb8c77482e45f1f44de1745f52c74426c631bdd52",
+    balance: "0.0000",
     network: "BEP-20",
     color:   "from-yellow-400 to-orange-400",
     icon:    "◈",
@@ -36,8 +36,8 @@ const DEMO_NETWORKS = [
   {
     chain:   "Bitcoin",
     symbol:  "BTC",
-    address: "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
-    balance: "0.0041",
+    address: "bc1pvxzqhrn77ccaxddl6kmdug2w9jtjedx4dzewg626s3hjfhavtd0q464j8m",
+    balance: "0.0000",
     network: "Bitcoin",
     color:   "from-orange-400 to-yellow-500",
     icon:    "₿",
@@ -126,7 +126,6 @@ export default function Dashboard({ activeNetIndex = 0 }) {
                 </svg>
                 Deposit
               </button>
-              {isSolana && (
                 <button
                   onClick={() => setShowSend(true)}
                   className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-300 text-xs font-medium transition-colors"
@@ -136,7 +135,6 @@ export default function Dashboard({ activeNetIndex = 0 }) {
                   </svg>
                   Send
                 </button>
-              )}
             </div>
           </div>
 
@@ -179,11 +177,9 @@ export default function Dashboard({ activeNetIndex = 0 }) {
       {/* Send modal — Solana only */}
       <SendModal
         isOpen={showSend}
-        onClose={() => {
-          setShowSend(false);
-          setTimeout(fetchWallet, 2000);
-        }}
+        onClose={() => { setShowSend(false); setTimeout(fetchWallet, 2000); }}
         balance={solWallet?.balance ?? 0}
+        network={activeNet}
       />
     </div>
   );

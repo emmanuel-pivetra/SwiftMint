@@ -19,23 +19,6 @@ export default function Header({ chain, onOpenDeposit, onToggleSidebar }) {
           </button>
           <span className="text-white font-bold text-base">SwiftMint</span>
         </div>
-
-        {/* Right — chain badge + deposit button */}
-        <div className="flex items-center gap-2">
-          <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/15 border border-purple-500/25 text-purple-300 text-xs font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
-            {chain}
-          </span>
-          <button
-            onClick={onOpenDeposit}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 transition-colors text-white text-xs font-semibold"
-          >
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
-              <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-            </svg>
-            Deposit
-          </button>
-        </div>
       </div>
     </header>
   );

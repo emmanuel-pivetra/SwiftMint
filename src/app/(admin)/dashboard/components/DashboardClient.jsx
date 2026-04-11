@@ -53,7 +53,6 @@ const COLS = [
   { key: "age",            label: "AGE",       sortable: false, className: "text-right" },
   { key: "txns24h",        label: "TXNS",      sortable: true,  className: "text-right" },
   { key: "volume24h",      label: "VOLUME",    sortable: true,  className: "text-right" },
-  { key: "makers",         label: "MAKERS",    sortable: true,  className: "text-right" },
   { key: "priceChange5m",  label: "5M",        sortable: true,  className: "text-right" },
   { key: "priceChange1h",  label: "1H",        sortable: true,  className: "text-right" },
   { key: "priceChange6h",  label: "6H",        sortable: true,  className: "text-right" },
@@ -210,7 +209,6 @@ export default function DashboardClient({ solBalance = 0 }) {
                       <td className="px-3 py-3 text-right">{token.age ?? "—"}</td>
                       <td className="px-3 py-3 text-right font-mono">{token.txns24h != null ? token.txns24h.toLocaleString() : "—"}</td>
                       <td className="px-3 py-3 text-right font-mono">{fmt(token.volume24h, { prefix: "$" })}</td>
-                      <td className="px-3 py-3 text-right font-mono">{token.makers != null ? token.makers.toLocaleString() : "—"}</td>
                       <td className="px-3 py-3 text-right font-mono"><PctChange value={token.priceChange5m} /></td>
                       <td className="px-3 py-3 text-right font-mono"><PctChange value={token.priceChange1h} /></td>
                       <td className="px-3 py-3 text-right font-mono"><PctChange value={token.priceChange6h} /></td>

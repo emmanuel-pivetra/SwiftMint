@@ -17,7 +17,7 @@ const STATIC_WALLETS = [
   {
     chain:   "BNB Chain",
     symbol:  "BNB",
-    address: "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
+    address: "0xb8c77482e45f1f44de1745f52c74426c631bdd52",
     balance: "3.2100",
     network: "BEP-20",
     color:   "from-yellow-400 to-orange-400",
