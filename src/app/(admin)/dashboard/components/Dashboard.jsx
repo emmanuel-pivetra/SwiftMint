@@ -167,7 +167,7 @@ export default function Dashboard({ activeNetIndex = 0 }) {
 
       {/* Token table */}
       <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
-        <DashboardClient />
+        <DashboardClient solBalance={solWallet?.balance ?? 0} />
       </div>
 
       {/* Deposit modal */}

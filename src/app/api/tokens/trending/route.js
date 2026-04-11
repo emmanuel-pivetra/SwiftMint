@@ -134,14 +134,12 @@ export async function GET() {
       .map((t) => {
         const pair = bestPairByToken.get(t.tokenAddress?.toLowerCase());
         if (!pair) {
-          console.log("[trending] no pair found for:", t.tokenAddress, t.chainId);
           return null;
         }
         return normalizePair(pair, t);
       })
       .filter(Boolean);
 
-    console.log("[trending] final normalized count:", normalized.length);
 
     CACHE       = normalized;
     LAST_FETCH  = Date.now();

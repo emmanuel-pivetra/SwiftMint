@@ -1,8 +1,15 @@
+"use client";  // ← add this
+
+import { useState } from "react";
 import Image from "next/image";
 import { Button } from "../components/ui/button";
 import heroDevices from "../../../public/images/trading.jpg";
+import AuthModal from "./AuthModal";
 
 const HeroSection = () => {
+  const [authOpen,  setAuthOpen]  = useState(false);
+  const [authTab,   setAuthTab]   = useState("signup");
+
   return (
     <section className="relative overflow-hidden bg-[#0B1019] px-4 py-16 sm:px-6 md:py-24 lg:py-32">
 
@@ -29,10 +36,14 @@ const HeroSection = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-            <Button className="bg-[#0B92F1] hover:bg-[#5DB3E7] text-white px-8 py-3 rounded-xl font-semibold shadow-lg shadow-[#0B92F1]/20 transition-all w-full sm:w-auto">
+            <Button
+              onClick={() => { setAuthTab("signup"); setAuthOpen(true); }}  // ← signup
+              className="bg-[#0B92F1] hover:bg-[#5DB3E7] text-white px-8 py-3 rounded-xl font-semibold shadow-lg shadow-[#0B92F1]/20 transition-all w-full sm:w-auto"
+            >
               Get Started
             </Button>
             <Button
+              onClick={() => { setAuthTab("login"); setAuthOpen(true); }}   // ← login
               variant="outline"
               className="border-[#3F505F] text-white px-8 py-3 rounded-xl hover:bg-white/5 transition-all w-full sm:w-auto"
             >
@@ -43,10 +54,7 @@ const HeroSection = () => {
 
         {/* ── RIGHT IMAGE ── */}
         <div className="flex-1 relative w-full max-w-xl mx-auto md:mx-0">
-
-          {/* Glow behind image */}
           <div className="absolute inset-0 bg-[#0B92F1]/20 blur-3xl rounded-full pointer-events-none" />
-
           <Image
             src={heroDevices}
             alt="Trading platform on multiple devices"
@@ -57,6 +65,13 @@ const HeroSection = () => {
           />
         </div>
       </div>
+
+      {/* Auth modal */}
+      <AuthModal
+        isOpen={authOpen}
+        onClose={() => setAuthOpen(false)}
+        defaultTab={authTab}
+      />
     </section>
   );
 };
