@@ -1,5 +1,4 @@
 // src/app/api/wallet/me/route.js
-// Returns the current user's custodial wallet address and balance
 
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
@@ -11,7 +10,6 @@ export async function GET() {
   try {
     const cookieStore = await cookies();
 
-    // Get the logged-in user from session
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -34,15 +32,15 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Fetch wallet using service role (bypasses RLS)
     const serviceSupabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
+    // Fetch wallet — now includes demo balances
     const { data: wallet, error: walletError } = await serviceSupabase
       .from("wallets")
-      .select("address")
+      .select("address, demo_eth, demo_bnb, demo_btc")
       .eq("user_id", user.id)
       .single();
 
@@ -54,9 +52,13 @@ export async function GET() {
     const balance = await getBalance(wallet.address);
 
     return NextResponse.json({
-      address: wallet.address,
+      address:  wallet.address,
       balance,
-      symbol: "SOL",
+      symbol:   "SOL",
+      // Demo balances for other networks
+      demo_eth: wallet.demo_eth ?? "0.0000",
+      demo_bnb: wallet.demo_bnb ?? "0.0000",
+      demo_btc: wallet.demo_btc ?? "0.0000",
     });
   } catch (err) {
     console.error("[wallet/me]", err);

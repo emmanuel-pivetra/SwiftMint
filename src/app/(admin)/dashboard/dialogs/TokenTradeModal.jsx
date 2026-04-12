@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import AISniperModal from "./AisniperModal";
 
 function fmt(num, opts = {}) {
   if (num == null || isNaN(num)) return "—";
@@ -438,7 +439,8 @@ function WalletStep({ onBack, solBalance }) {
 
 // ── Main Modal ────────────────────────────────────────────────────────────────
 export default function TokenTradeModal({ token, isOpen, onClose, solBalance = 0 }) {
-  const [step, setStep] = useState("overview");
+  const [step, setStep] = useState("overview");  
+  const [showSniper, setShowSniper] = useState(false);
 
   function handleAction(id) {
     if (id === "buysell")   setStep("buysell");
@@ -449,8 +451,8 @@ export default function TokenTradeModal({ token, isOpen, onClose, solBalance = 0
     if (id === "wallet")    setStep("wallet");
     if (id === "refresh")   onClose();
     if (id === "help")      window.open("https://docs.swiftmint.com", "_blank");
-    if (id === "sniper")    setStep("overview"); // placeholder
     if (id === "copy")      setStep("overview"); // placeholder
+    if (id === "sniper")    setShowSniper(true);
   }
 
   function handleClose() {
@@ -501,7 +503,6 @@ export default function TokenTradeModal({ token, isOpen, onClose, solBalance = 0
                 >✕</button>
               </div>
 
-              {/* Body */}
               <div className="flex-1 overflow-y-auto px-5 py-4">
                 <AnimatePresence mode="wait">
                   {step === "overview"  && <OverviewStep  key="overview"  token={token} onAction={handleAction} onClose={handleClose} />}
@@ -513,8 +514,13 @@ export default function TokenTradeModal({ token, isOpen, onClose, solBalance = 0
                   {step === "wallet"    && <WalletStep    key="wallet"    onBack={() => setStep("overview")} solBalance={solBalance} />}
                 </AnimatePresence>
               </div>
+
             </div>
           </motion.div>
+          <AISniperModal
+            isOpen={showSniper}
+            onClose={() => setShowSniper(false)}
+          />
         </>
       )}
     </AnimatePresence>
