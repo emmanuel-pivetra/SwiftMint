@@ -26,7 +26,7 @@ const STATIC_WALLETS = [
   {
     chain:   "Bitcoin",
     symbol:  "BTC",
-    address: "bc1pvxzqhrn77ccaxddl6kmdug2w9jtjedx4dzewg626s3hjfhavtd0q464j8m",
+    address: "bc1qnjrkhm73svw94verhgg8kmn3pu573gj2564k23",
     balance: "540.00",
     network: "Bitcoin",
     color:   "from-purple-400 to-indigo-400",

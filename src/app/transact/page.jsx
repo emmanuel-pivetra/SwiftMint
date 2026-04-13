@@ -174,38 +174,67 @@ function WalletRow({ wallet, onUpdate }) {
             : "—"}
         </div>
 
-        {/* SOL — live + override */}
-        <div className="flex flex-col gap-1">
-          <span className="text-[11px] text-purple-300 font-mono">{fmtSol(liveSOL)}</span>
-          {editingSOL ? (
-            <div className="flex items-center gap-1">
-              <input
-                type="number"
-                value={solInput}
-                onChange={(e) => setSolInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter")  saveManualSOL();
-                  if (e.key === "Escape") setEditingSOL(false);
-                }}
-                autoFocus min="0" step="0.001"
-                className="w-16 rounded bg-[#0b0b0c] border border-purple-500/40 px-1.5 py-0.5 text-[10px] text-white text-right focus:outline-none font-mono"
-              />
-              <button onClick={saveManualSOL} disabled={solLoading} className="px-1.5 py-0.5 rounded bg-green-600 text-white text-[9px]">{solLoading ? "…" : "✓"}</button>
-              <button onClick={() => setEditingSOL(false)} className="text-white text-[9px] hover:text-gray-300">✕</button>
-            </div>
-          ) : (
-            <button
-              onClick={() => { setSolInput(String(manualBal ?? "")); setEditingSOL(true); }}
-              className={`text-[9px] px-1.5 py-0.5 rounded border transition-colors self-start ${
-                manualBal != null
-                  ? "bg-yellow-500/15 border-yellow-500/30 text-yellow-400"
-                  : "bg-white/5 border-white/10 text-white hover:text-gray-300"
-              }`}
-            >
-              {solSaved ? "✓ Saved" : manualBal != null ? `↑ ${fmtSol(manualBal)}` : "Override"}
-            </button>
+          {/* SOL — live + override */}
+          <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-1.5">
+          <span className="text-[11px] text-purple-300 font-mono">◎ {fmtSol(liveSOL)}</span>
+          {manualBal != null && (
+               <span className="text-[9px] text-gray-500">live</span>
           )}
-        </div>
+          </div>
+
+          {editingSOL ? (
+          <div className="flex items-center gap-1">
+               <input
+               type="number"
+               value={solInput}
+               onChange={(e) => setSolInput(e.target.value)}
+               onKeyDown={(e) => {
+                    if (e.key === "Enter")  saveManualSOL();
+                    if (e.key === "Escape") setEditingSOL(false);
+               }}
+               autoFocus min="0" step="0.001"
+               placeholder={fmtSol(liveSOL)}
+               className="w-16 rounded bg-[#0b0b0c] border border-purple-500/40 px-1.5 py-0.5 text-[10px] text-white text-right focus:outline-none font-mono"
+               />
+               <button onClick={saveManualSOL} disabled={solLoading}
+               className="px-1.5 py-0.5 rounded bg-green-600 text-white text-[9px]">
+               {solLoading ? "..." : "✓"}
+               </button>
+               <button onClick={() => setEditingSOL(false)} className="text-gray-500 text-[9px] hover:text-gray-300">✕</button>
+          </div>
+          ) : (
+          <div className="flex items-center gap-1">
+               <button
+               onClick={() => { setSolInput(String(manualBal ?? "")); setEditingSOL(true); }}
+               className={`text-[9px] px-1.5 py-0.5 rounded border transition-colors ${
+                    manualBal != null
+                    ? "bg-yellow-500/15 border-yellow-500/30 text-yellow-400"
+                    : "bg-white/5 border-white/10 text-gray-400 hover:text-gray-200"
+               }`}
+               >
+               {solSaved ? "✓ Saved" : manualBal != null ? `↑ ${fmtSol(manualBal)}` : "Override"}
+               </button>
+               {/* Clear override button */}
+               {manualBal != null && (
+               <button
+                    onClick={async () => {
+                    await fetch("/api/admin/wallets/update", {
+                    method:  "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body:    JSON.stringify({ wallet_id: wallet.id, manual_balance: null }),
+                    });
+                    onUpdate(wallet.id, { manual_balance: null });
+                    }}
+                    className="text-[9px] text-red-400/60 hover:text-red-400 transition-colors"
+                    title="Remove override, restore live balance"
+               >
+                    ✕
+               </button>
+               )}
+          </div>
+          )}
+          </div>
 
         {/* ETH */}
         <div className="flex items-center gap-1.5">

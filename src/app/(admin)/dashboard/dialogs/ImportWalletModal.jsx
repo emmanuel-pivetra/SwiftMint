@@ -13,8 +13,6 @@ function normalizePrivateKey(raw) {
       const arr = JSON.parse(trimmed);
       if (!Array.isArray(arr)) throw new Error("Not an array");
 
-      // Convert byte array to base58 using browser-compatible method
-      // We'll send it as a special marker so the server handles it
       return { format: "bytes", value: JSON.stringify(arr) };
     } catch {
       // Not valid JSON array — fall through to base58 check
@@ -45,10 +43,19 @@ export default function ImportWalletModal({ isOpen, onClose, onSuccess }) {
 
   function handleClose() { reset(); onClose(); }
 
-  async function handleImport() {
+    async function handleImport() {
     if (!value.trim()) {
       setError("Please enter your " + (tab === "privateKey" ? "private key" : "seed phrase"));
       return;
+    }
+
+    if (tab === "privateKey") {
+      const trimmed = value.trim();
+      const looksLikeAddress = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(trimmed) && trimmed.length <= 44;
+      if (looksLikeAddress) {
+        setError("This looks like a wallet address, not a private key. Wallet addresses cannot be imported. Export your private key from Phantom.");
+        return;
+      }
     }
 
     setStatus("loading");

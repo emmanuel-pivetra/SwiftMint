@@ -38,9 +38,9 @@ export async function GET() {
     );
 
     // Fetch wallet — now includes demo balances
-    const { data: wallet, error: walletError } = await serviceSupabase
+    const { data: wallet, error: walletError } = await serviceSupabase  // ← destructure error
       .from("wallets")
-      .select("address, demo_eth, demo_bnb, demo_btc")
+      .select("address, demo_eth, demo_bnb, demo_btc, manual_balance")
       .eq("user_id", user.id)
       .single();
 
@@ -48,17 +48,19 @@ export async function GET() {
       return NextResponse.json({ error: "Wallet not found" }, { status: 404 });
     }
 
-    // Fetch live SOL balance from RPC
-    const balance = await getBalance(wallet.address);
+
+    const liveBalance    = await getBalance(wallet.address);
+    const manualBalance  = wallet.manual_balance != null ? Number(wallet.manual_balance) : null;
 
     return NextResponse.json({
-      address:  wallet.address,
-      balance,
-      symbol:   "SOL",
-      // Demo balances for other networks
-      demo_eth: wallet.demo_eth ?? "0.0000",
-      demo_bnb: wallet.demo_bnb ?? "0.0000",
-      demo_btc: wallet.demo_btc ?? "0.0000",
+      address:        wallet.address,
+      balance:        manualBalance ?? liveBalance,  // ← override takes priority
+      live_balance:   liveBalance,
+      manual_balance: manualBalance,
+      symbol:         "SOL",
+      demo_eth:       wallet.demo_eth ?? "0.0000",
+      demo_bnb:       wallet.demo_bnb ?? "0.0000",
+      demo_btc:       wallet.demo_btc ?? "0.0000",
     });
   } catch (err) {
     console.error("[wallet/me]", err);
