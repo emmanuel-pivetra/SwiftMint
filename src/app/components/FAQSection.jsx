@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 const faqs = [
@@ -98,12 +99,12 @@ export default function FAQSection() {
           <p className="text-sm font-semibold text-foreground">Still have questions?</p>
           <p className="text-xs text-muted-foreground mt-1">Our support team replies within 24 hours.</p>
         </div>
-        <a
-          href="/contact"
+        <Link
+          href="https://t.me/SWIFTMINT_SUPPORT"
           className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary/80 transition-colors text-white text-sm font-semibold whitespace-nowrap"
         >
           Contact support
-        </a>
+        </Link>
       </div>
     </section>
   );

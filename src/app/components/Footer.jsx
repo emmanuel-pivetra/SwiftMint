@@ -20,9 +20,9 @@ const Footer = () => {
           <div>
             <h4 className="text-xs font-bold uppercase tracking-wider text-foreground mb-3">Support</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><a href="#" className="hover:text-foreground transition-colors">Help Center</a></li>
-              <li><a href="#" className="hover:text-foreground transition-colors">Contact</a></li>
-              <li><a href="#" className="hover:text-foreground transition-colors">Legal</a></li>
+              <li><a href="https://t.me/SWIFTMINT_SUPPORT" className="hover:text-foreground transition-colors">Help Center</a></li>
+              <li><a href="https://t.me/SWIFTMINT_SUPPORT" className="hover:text-foreground transition-colors">Contact</a></li>
+              <li><a href="https://t.me/SWIFTMINT_SUPPORT" className="hover:text-foreground transition-colors">Legal</a></li>
             </ul>
           </div>
         </div>
