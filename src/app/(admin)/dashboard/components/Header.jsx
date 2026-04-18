@@ -1,5 +1,6 @@
 "use client";
-
+import Image from "next/image";
+import SwiftMint from "../../../../../public/images/swiftmint.jpeg";
 // Pass onToggleSidebar from DashboardPage to show the hamburger on mobile
 export default function Header({ chain, onOpenDeposit, onToggleSidebar }) {
   return (
@@ -17,6 +18,14 @@ export default function Header({ chain, onOpenDeposit, onToggleSidebar }) {
               <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
           </button>
+          <Image
+            src={SwiftMint}
+            alt="Trading platform on multiple devices"
+            width={24}
+            height={24}
+            className="relative w-full rounded-2xl shadow-2xl object-cover"
+            priority
+          />
           <span className="text-white font-bold text-base">SwiftMint</span>
         </div>
       </div>

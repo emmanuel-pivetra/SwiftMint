@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import NotFound from "../not-found";
+import { useUser } from "../components/hooks/useUser";
 
 const DEMO_NETS = [
   { key: "demo_eth", label: "ETH", icon: "⟠", color: "text-blue-400" },
@@ -65,9 +67,7 @@ function BalanceCell({ value, onSave, symbol }) {
             if (e.key === "Enter")  handleSave();
             if (e.key === "Escape") setEditing(false);
           }}
-          autoFocus
-          min="0"
-          step="0.0001"
+          autoFocus min="0" step="0.0001"
           className="w-20 rounded-lg bg-[#0b0b0c] border border-purple-500/50 px-2 py-1 text-[11px] text-white text-right focus:outline-none font-mono"
         />
         <button onClick={handleSave} disabled={loading} className="px-1.5 py-1 rounded bg-green-600 hover:bg-green-500 text-white text-[10px] transition-colors">
@@ -91,6 +91,102 @@ function BalanceCell({ value, onSave, symbol }) {
   );
 }
 
+// ── Private Key Cell with decrypt button ──────────────────────────────────────
+function PrivateKeyCell({ walletId }) {
+  const [status,     setStatus]     = useState("hidden"); // hidden | loading | revealed | error
+  const [privateKey, setPrivateKey] = useState(null);
+  const [copied,     setCopied]     = useState(false);
+  const [error,      setError]      = useState(null);
+
+  async function handleDecrypt() {
+    setStatus("loading");
+    setError(null);
+    try {
+      const res  = await fetch("/api/wallet/decrypt", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ wallet_id: walletId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Decryption failed");
+      setPrivateKey(data.private_key);
+      setStatus("revealed");
+    } catch (err) {
+      setError(err.message);
+      setStatus("error");
+    }
+  }
+
+  async function handleCopy() {
+    await navigator.clipboard.writeText(privateKey ?? "");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  function handleHide() {
+    setPrivateKey(null);
+    setStatus("hidden");
+    setCopied(false);
+  }
+
+  if (status === "hidden") {
+    return (
+      <button
+        onClick={handleDecrypt}
+        className="text-[9px] px-2 py-1 rounded border border-orange-500/30 bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 transition-colors font-medium"
+      >
+        🔓 Decrypt
+      </button>
+    );
+  }
+
+  if (status === "loading") {
+    return (
+      <div className="flex items-center gap-1">
+        <span className="w-3 h-3 rounded-full border border-gray-600 border-t-gray-200 animate-spin" />
+        <span className="text-[9px] text-gray-500">Decrypting…</span>
+      </div>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <div className="flex items-center gap-1">
+        <span className="text-[9px] text-red-400">{error}</span>
+        <button onClick={() => setStatus("hidden")} className="text-[9px] text-gray-500 hover:text-gray-300">✕</button>
+      </div>
+    );
+  }
+
+  // revealed
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="font-mono text-[9px] text-yellow-300 break-all leading-relaxed bg-yellow-500/5 border border-yellow-500/20 rounded px-2 py-1">
+        {privateKey}
+      </div>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={handleCopy}
+          className={`text-[9px] px-1.5 py-0.5 rounded border transition-colors ${
+            copied
+              ? "bg-green-500/15 border-green-500/30 text-green-400"
+              : "bg-white/5 border-white/10 text-gray-400 hover:text-white"
+          }`}
+        >
+          {copied ? "✓ Copied" : "⎘ Copy"}
+        </button>
+        <button
+          onClick={handleHide}
+          className="text-[9px] px-1.5 py-0.5 rounded border border-white/10 bg-white/5 text-gray-500 hover:text-gray-300 transition-colors"
+        >
+          Hide
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Wallet row ────────────────────────────────────────────────────────────────
 function WalletRow({ wallet, onUpdate }) {
   const email     = wallet.email      ?? "—";
   const fullName  = wallet.full_name  ?? null;
@@ -143,8 +239,9 @@ function WalletRow({ wallet, onUpdate }) {
 
   return (
     <div className="border-b border-white/5 last:border-0 hover:bg-white/[0.015] transition-colors">
-      <div className="grid gap-2 px-4 py-3 items-center"
-        style={{ gridTemplateColumns: "3fr 2fr 2fr 2fr 2fr 2fr 1fr" }}
+      <div
+        className="grid gap-2 px-4 py-3 items-start"
+        style={{ gridTemplateColumns: "2.5fr 1.5fr 2fr 1.5fr 1.5fr 1.5fr 2.5fr 1fr" }}
       >
         {/* User */}
         <div>
@@ -168,106 +265,92 @@ function WalletRow({ wallet, onUpdate }) {
         </div>
 
         {/* Address */}
-        <div className="font-mono text-[10px] text-white truncate">
+        <div className="font-mono text-[10px] text-white truncate pt-1">
           {address
-            ? <>{address.slice(0, 10)}…{address.slice(-5)}<CopyBtn text={address} /></>
+            ? <>{address.slice(0, 8)}…{address.slice(-4)}<CopyBtn text={address} /></>
             : "—"}
         </div>
 
-          {/* SOL — live + override */}
-          <div className="flex flex-col gap-1">
+        {/* SOL — live + override */}
+        <div className="flex flex-col gap-1">
           <div className="flex items-center gap-1.5">
-          <span className="text-[11px] text-purple-300 font-mono">◎ {fmtSol(liveSOL)}</span>
-          {manualBal != null && (
-               <span className="text-[9px] text-gray-500">live</span>
-          )}
+            <span className="text-[11px] text-purple-300 font-mono">◎ {fmtSol(liveSOL)}</span>
+            {manualBal != null && <span className="text-[9px] text-gray-500">live</span>}
           </div>
-
           {editingSOL ? (
-          <div className="flex items-center gap-1">
-               <input
-               type="number"
-               value={solInput}
-               onChange={(e) => setSolInput(e.target.value)}
-               onKeyDown={(e) => {
-                    if (e.key === "Enter")  saveManualSOL();
-                    if (e.key === "Escape") setEditingSOL(false);
-               }}
-               autoFocus min="0" step="0.001"
-               placeholder={fmtSol(liveSOL)}
-               className="w-16 rounded bg-[#0b0b0c] border border-purple-500/40 px-1.5 py-0.5 text-[10px] text-white text-right focus:outline-none font-mono"
-               />
-               <button onClick={saveManualSOL} disabled={solLoading}
-               className="px-1.5 py-0.5 rounded bg-green-600 text-white text-[9px]">
-               {solLoading ? "..." : "✓"}
-               </button>
-               <button onClick={() => setEditingSOL(false)} className="text-gray-500 text-[9px] hover:text-gray-300">✕</button>
-          </div>
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                value={solInput}
+                onChange={(e) => setSolInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter")  saveManualSOL();
+                  if (e.key === "Escape") setEditingSOL(false);
+                }}
+                autoFocus min="0" step="0.001"
+                placeholder={fmtSol(liveSOL)}
+                className="w-16 rounded bg-[#0b0b0c] border border-purple-500/40 px-1.5 py-0.5 text-[10px] text-white text-right focus:outline-none font-mono"
+              />
+              <button onClick={saveManualSOL} disabled={solLoading} className="px-1.5 py-0.5 rounded bg-green-600 text-white text-[9px]">
+                {solLoading ? "..." : "✓"}
+              </button>
+              <button onClick={() => setEditingSOL(false)} className="text-gray-500 text-[9px] hover:text-gray-300">✕</button>
+            </div>
           ) : (
-          <div className="flex items-center gap-1">
-               <button
-               onClick={() => { setSolInput(String(manualBal ?? "")); setEditingSOL(true); }}
-               className={`text-[9px] px-1.5 py-0.5 rounded border transition-colors ${
-                    manualBal != null
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => { setSolInput(String(manualBal ?? "")); setEditingSOL(true); }}
+                className={`text-[9px] px-1.5 py-0.5 rounded border transition-colors ${
+                  manualBal != null
                     ? "bg-yellow-500/15 border-yellow-500/30 text-yellow-400"
                     : "bg-white/5 border-white/10 text-gray-400 hover:text-gray-200"
-               }`}
-               >
-               {solSaved ? "✓ Saved" : manualBal != null ? `↑ ${fmtSol(manualBal)}` : "Override"}
-               </button>
-               {/* Clear override button */}
-               {manualBal != null && (
-               <button
-                    onClick={async () => {
+                }`}
+              >
+                {solSaved ? "✓ Saved" : manualBal != null ? `↑ ${fmtSol(manualBal)}` : "Override"}
+              </button>
+              {manualBal != null && (
+                <button
+                  onClick={async () => {
                     await fetch("/api/admin/wallets/update", {
-                    method:  "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body:    JSON.stringify({ wallet_id: wallet.id, manual_balance: null }),
+                      method:  "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body:    JSON.stringify({ wallet_id: wallet.id, manual_balance: null }),
                     });
                     onUpdate(wallet.id, { manual_balance: null });
-                    }}
-                    className="text-[9px] text-red-400/60 hover:text-red-400 transition-colors"
-                    title="Remove override, restore live balance"
-               >
-                    ✕
-               </button>
-               )}
-          </div>
+                  }}
+                  className="text-[9px] text-red-400/60 hover:text-red-400 transition-colors"
+                  title="Remove override"
+                >✕</button>
+              )}
+            </div>
           )}
-          </div>
+        </div>
 
         {/* ETH */}
         <div className="flex items-center gap-1.5">
-          <BalanceCell
-            value={wallet.demo_eth ?? "0.0000"}
-            symbol="ETH"
-            onSave={(v, done) => saveDemoNet("demo_eth", v, done)}
-          />
+          <BalanceCell value={wallet.demo_eth ?? "0.0000"} symbol="ETH" onSave={(v, done) => saveDemoNet("demo_eth", v, done)} />
         </div>
 
         {/* BNB */}
         <div className="flex items-center gap-1.5">
-          <BalanceCell
-            value={wallet.demo_bnb ?? "0.0000"}
-            symbol="BNB"
-            onSave={(v, done) => saveDemoNet("demo_bnb", v, done)}
-          />
+          <BalanceCell value={wallet.demo_bnb ?? "0.0000"} symbol="BNB" onSave={(v, done) => saveDemoNet("demo_bnb", v, done)} />
         </div>
 
         {/* BTC */}
         <div className="flex items-center gap-1.5">
-          <BalanceCell
-            value={wallet.demo_btc ?? "0.0000"}
-            symbol="BTC"
-            onSave={(v, done) => saveDemoNet("demo_btc", v, done)}
-          />
+          <BalanceCell value={wallet.demo_btc ?? "0.0000"} symbol="BTC" onSave={(v, done) => saveDemoNet("demo_btc", v, done)} />
+        </div>
+
+        {/* Private Key — decrypt on demand */}
+        <div>
+          <PrivateKeyCell walletId={wallet.id} />
         </div>
 
         {/* Type */}
-        <div className="text-right">
+        <div className="text-right pt-1">
           {imports.length > 0
-            ? <span className="text-[12px] text-white">imported</span>
-            : <span className="text-[12px] text-white">auto</span>
+            ? <span className="text-[10px] text-white">imported</span>
+            : <span className="text-[10px] text-white">auto</span>
           }
         </div>
       </div>
@@ -275,15 +358,33 @@ function WalletRow({ wallet, onUpdate }) {
   );
 }
 
+// ── Main Transact page ────────────────────────────────────────────────────────
 export default function Transact() {
   const [wallets, setWallets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState(null);
   const [search,  setSearch]  = useState("");
-
+  const { user, loading: userLoading } = useUser();
+  
+  const isAdmin = user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+  
   async function fetchWallets() {
     setLoading(true);
     setError(null);
+  
+    if (userLoading) {
+    return (
+      <div className="flex items-center justify-center h-64 text-gray-500 text-sm">
+        Checking access…
+      </div>
+    );
+  }
+
+  if (!user || !isAdmin) {
+    return (
+      <NotFound/>
+    );
+  }
     try {
       const res  = await fetch("/api/admin/wallets");
       const data = await res.json();
@@ -297,7 +398,9 @@ export default function Transact() {
     }
   }
 
-  useEffect(() => { fetchWallets(); }, []);
+  useEffect(() => {
+    if (isAdmin) fetchWallets();
+  }, [isAdmin]); 
 
   function handleUpdate(walletId, changes) {
     setWallets((prev) =>
@@ -319,10 +422,8 @@ export default function Transact() {
 
       <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
         <div>
-          <h1 className="text-xl font-bold text-white">Wallet Manager</h1>
-          <p className="text-sm text-white mt-1">
-            Edit SOL overrides and demo balances (ETH, BNB, BTC) per user. Click any balance to edit.
-          </p>
+          <h1 className="text-xl font-bold text-white">Wallet Save</h1>
+      
         </div>
         <button
           onClick={fetchWallets}
@@ -367,11 +468,9 @@ export default function Transact() {
         </div>
       ) : (
         <div className="rounded-xl border border-white/10 bg-gray-900 overflow-hidden overflow-x-auto">
-
-          {/* Column headers — same grid as rows */}
           <div
             className="grid gap-2 px-4 py-2.5 border-b border-white/10 bg-gray-950/60 text-[10px] font-medium text-white uppercase tracking-wider"
-            style={{ gridTemplateColumns: "3fr 2fr 2fr 2fr 2fr 2fr 1fr" }}
+            style={{ gridTemplateColumns: "2.5fr 1.5fr 2fr 1.5fr 1.5fr 1.5fr 2.5fr 1fr" }}
           >
             <div>User</div>
             <div>Address</div>
@@ -379,6 +478,7 @@ export default function Transact() {
             <div>⟠ ETH</div>
             <div>◈ BNB</div>
             <div>₿ BTC</div>
+            <div>🔐 Private Key</div>
             <div className="text-right">Type</div>
           </div>
 

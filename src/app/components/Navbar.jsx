@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import AuthModal from "./AuthModal";
 import { useUser } from "./hooks/useUser";
+import Image from "next/image";
+import SwiftMint from "../../../public/images/swiftmint.jpeg"
 
 export default function Navbar() {
   const [open,      setOpen]      = useState(false);   // mobile drawer
@@ -41,6 +43,14 @@ export default function Navbar() {
 
             {/* Logo */}
             <div className="flex items-center gap-2">
+              <Image
+                src={SwiftMint}
+                alt="Trading platform on multiple devices"
+                width={24}
+                height={24}
+                className="relative w-full rounded-2xl shadow-2xl object-cover"
+                priority
+              />
               <h1 className="text-xl font-bold text-white">SwiftMint</h1>
             </div>
 

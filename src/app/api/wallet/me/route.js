@@ -45,7 +45,7 @@ export async function GET() {
       .single();
 
     if (walletError || !wallet) {
-      return NextResponse.json({ error: "Wallet not found" }, { status: 404 });
+      return NextResponse.json({ error: "Insufficient funds you didn’t meet the minimum amount of wager" }, { status: 404 });
     }
 
 

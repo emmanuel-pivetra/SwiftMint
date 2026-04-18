@@ -1,15 +1,16 @@
 // src/app/api/wallet/send/route.js
+
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
-import { sendSOL } from "@/src/app/lib/custodial-wallet";
+import { sendSOL } from "../../lib/custodial-wallet";
+import { decrypt } from "../../lib/encryption";
 
 export async function POST(req) {
   try {
     const cookieStore = await cookies();
 
-    // Get authenticated user from session
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -38,15 +39,15 @@ export async function POST(req) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
-    // Fetch encrypted private key using service role
     const serviceSupabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
+    // Fetch wallet — select private_key (encrypted)
     const { data: wallet, error: walletError } = await serviceSupabase
       .from("wallets")
-      .select("encrypted_priv_key")
+      .select("address, private_key")
       .eq("user_id", user.id)
       .single();
 
@@ -54,12 +55,29 @@ export async function POST(req) {
       return NextResponse.json({ error: "Wallet not found" }, { status: 404 });
     }
 
-    // Sign and broadcast the transaction
+    // Block watch-only wallets
+    if (wallet.private_key === "watch-only") {
+      return NextResponse.json(
+        { error: "This is a watch-only wallet. You cannot send funds from it." },
+        { status: 403 }
+      );
+    }
+
+    // Decrypt private key in memory — never logged or stored
+    const rawPrivateKey = decrypt(wallet.private_key);
+
+    if (!rawPrivateKey) {
+      return NextResponse.json({ error: "Failed to decrypt wallet key." }, { status: 500 });
+    }
+
+    // Sign and broadcast transaction using decrypted key
     const result = await sendSOL({
-      privateKey: wallet.private_key,
+      privateKey: rawPrivateKey, // ← decrypted, used only for this request
       toAddress,
-      amountSOL: Number(amountSOL),
+      amountSOL:  Number(amountSOL),
     });
+
+    // rawPrivateKey goes out of scope here — never stored anywhere
 
     return NextResponse.json({
       success:     true,

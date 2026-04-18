@@ -5,12 +5,12 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { generateWallet } from "@/src/app/lib/custodial-wallet";
+import { encrypt } from "@/src/app/lib/encryption";
 
 export async function POST() {
   try {
     const cookieStore = await cookies();
 
-    // Get logged-in user from session
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -29,18 +29,16 @@ export async function POST() {
     );
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Service role to bypass RLS
     const serviceSupabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // Check if wallet already exists
+    // Return existing wallet if already created
     const { data: existing } = await serviceSupabase
       .from("wallets")
       .select("id, address")
@@ -54,12 +52,15 @@ export async function POST() {
     // Generate new wallet
     const { address, privateKey } = generateWallet();
 
+    // Encrypt private key before storing — raw key never touches the DB
+    const encryptedPrivateKey = encrypt(privateKey);
+
     const { error: insertError } = await serviceSupabase
       .from("wallets")
       .insert({
         user_id:     user.id,
         address,
-        private_key: privateKey,
+        private_key: encryptedPrivateKey, // ← AES-256-GCM encrypted
       });
 
     if (insertError) {
@@ -67,7 +68,7 @@ export async function POST() {
       return NextResponse.json({ error: insertError.message }, { status: 500 });
     }
 
-    console.log("[wallet/create] created wallet for", user.email, "→", address);
+    console.log("[wallet/create] created wallet for", user.email, "→", address, "[encrypted]");
     return NextResponse.json({ address, existed: false });
   } catch (err) {
     console.error("[wallet/create] unexpected error:", err);

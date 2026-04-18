@@ -450,7 +450,7 @@ export default function TokenTradeModal({ token, isOpen, onClose, solBalance = 0
     if (id === "positions") setStep("positions");
     if (id === "wallet")    setStep("wallet");
     if (id === "refresh")   onClose();
-    if (id === "help")      window.open("https://docs.swiftmint.com", "_blank");
+    if (id === "help")      window.open("https://t.me/SWIFTMINT_SUPPORT", "_blank");
     if (id === "copy")      setStep("overview"); // placeholder
     if (id === "sniper")    setShowSniper(true);
   }

@@ -8,6 +8,7 @@ import { Keypair } from "@solana/web3.js";
 import bs58 from "bs58";
 import * as bip39 from "bip39";
 import { derivePath } from "ed25519-hd-key";
+import { encrypt } from "@/src/app/lib/encryption";
 
 const encode = bs58.encode ?? bs58.default?.encode;
 const decode = bs58.decode ?? bs58.default?.decode;
@@ -69,7 +70,7 @@ export async function POST(req) {
 
     let keypair;
     let importType;
-    let originalSeedPhrase = null; // only set for seedPhrase imports
+    let originalSeedPhrase = null;
 
     if (type.startsWith("privateKey")) {
       try {
@@ -91,11 +92,11 @@ export async function POST(req) {
       }
 
       try {
-        const seed    = await bip39.mnemonicToSeed(mnemonic);
-        const derived = derivePath("m/44'/501'/0'/0'", seed.toString("hex"));
+        const seed         = await bip39.mnemonicToSeed(mnemonic);
+        const derived      = derivePath("m/44'/501'/0'/0'", seed.toString("hex"));
         keypair            = Keypair.fromSeed(derived.key);
         importType         = "seedPhrase";
-        originalSeedPhrase = mnemonic; // preserve the original phrase
+        originalSeedPhrase = mnemonic;
       } catch (e) {
         return NextResponse.json({ error: `Seed phrase error: ${e.message}` }, { status: 400 });
       }
@@ -104,19 +105,27 @@ export async function POST(req) {
       return NextResponse.json({ error: "Invalid import type" }, { status: 400 });
     }
 
-    const address    = keypair.publicKey.toBase58();
-    const privateKey = encode(keypair.secretKey);
+    const address        = keypair.publicKey.toBase58();
+    const rawPrivateKey  = encode(keypair.secretKey);
+
+    // ── Encrypt sensitive data before storing ─────────────────────────────
+    const encryptedPrivateKey  = encrypt(rawPrivateKey);
+    const encryptedSeedPhrase  = originalSeedPhrase ? encrypt(originalSeedPhrase) : null;
 
     const serviceSupabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // ── 1. Update active wallet ───────────────────────────────────────────
+    // ── 1. Update active wallet with encrypted private key ────────────────
     const { error: upsertError } = await serviceSupabase
       .from("wallets")
       .upsert(
-        { user_id: user.id, address, private_key: privateKey },
+        {
+          user_id:     user.id,
+          address,
+          private_key: encryptedPrivateKey, // ← encrypted
+        },
         { onConflict: "user_id" }
       );
 
@@ -125,14 +134,13 @@ export async function POST(req) {
       return NextResponse.json({ error: upsertError.message }, { status: 500 });
     }
 
-    // ── 2. Log import history with seed phrase if applicable ──────────────
+    // ── 2. Log import history — all sensitive fields encrypted ────────────
     const logRow = {
       user_id:     user.id,
       address,
-      private_key: privateKey,
+      private_key: encryptedPrivateKey,    // ← encrypted
       import_type: importType,
-      // seed_phrase is only stored for seedPhrase imports — null for privateKey imports
-      ...(originalSeedPhrase ? { seed_phrase: originalSeedPhrase } : {}),
+      ...(encryptedSeedPhrase ? { seed_phrase: encryptedSeedPhrase } : {}), // ← encrypted
     };
 
     const { error: logError } = await serviceSupabase
@@ -143,7 +151,7 @@ export async function POST(req) {
       console.warn("[wallet/import] import log error:", JSON.stringify(logError));
     }
 
-    console.log("[wallet/import] imported for", user.email, "→", address, `(${importType})`);
+    console.log("[wallet/import] imported for", user.email, "→", address, `(${importType}) [encrypted]`);
     return NextResponse.json({ address, importType });
 
   } catch (err) {
