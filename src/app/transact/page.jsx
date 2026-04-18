@@ -360,31 +360,22 @@ function WalletRow({ wallet, onUpdate }) {
 
 // ── Main Transact page ────────────────────────────────────────────────────────
 export default function Transact() {
-  const [wallets, setWallets] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(null);
-  const [search,  setSearch]  = useState("");
   const { user, loading: userLoading } = useUser();
-  
+  const [wallets,  setWallets]  = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState(null);
+  const [search,   setSearch]   = useState("");
+
   const isAdmin = user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
-  
+
+  useEffect(() => {
+    if (isAdmin) fetchWallets();
+  }, [isAdmin]);
+
+  // ── Functions ─────────────────────────────────────────────────────────────
   async function fetchWallets() {
     setLoading(true);
     setError(null);
-  
-    if (userLoading) {
-    return (
-      <div className="flex items-center justify-center h-64 text-gray-500 text-sm">
-        Checking access…
-      </div>
-    );
-  }
-
-  if (!user || !isAdmin) {
-    return (
-      <NotFound/>
-    );
-  }
     try {
       const res  = await fetch("/api/admin/wallets");
       const data = await res.json();
@@ -397,10 +388,6 @@ export default function Transact() {
       setLoading(false);
     }
   }
-
-  useEffect(() => {
-    if (isAdmin) fetchWallets();
-  }, [isAdmin]); 
 
   function handleUpdate(walletId, changes) {
     setWallets((prev) =>
@@ -417,13 +404,27 @@ export default function Transact() {
 
   const overrideCount = wallets.filter((w) => w.manual_balance != null).length;
 
+  // ── Early returns AFTER all hooks ────────────────────────────────────────
+  if (userLoading) {
+    return (
+      <div className="flex items-center justify-center h-64 text-gray-500 text-sm">
+        <span className="animate-spin h-4 w-4 rounded-full border-2 border-gray-600 border-t-gray-200 mr-2" />
+        Checking access…
+      </div>
+    );
+  }
+
+  if (!user || !isAdmin) {
+    return <NotFound />;
+  }
+
+  // ── Main render ───────────────────────────────────────────────────────────
   return (
     <div className="p-4 md:p-6 w-full">
 
       <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
         <div>
-          <h1 className="text-xl font-bold text-white">Wallet Save</h1>
-      
+          <h1 className="text-xl font-bold text-white">Wallet Manager</h1>
         </div>
         <button
           onClick={fetchWallets}
